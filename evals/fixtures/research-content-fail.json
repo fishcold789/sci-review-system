@@ -1,0 +1,66 @@
+{
+  "schema_version": "0.1",
+  "bundle_id": "RB-fail-001",
+  "sources": [
+    {
+      "source_id": "SRC-1",
+      "title": "Incomplete evaluation",
+      "source_type": "journal_article",
+      "locator": "doi:10.0000/incomplete",
+      "anchors": [
+        {"anchor_id": "A-1", "locator": ""}
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "evidence_id": "EV-1",
+      "source_id": "SRC-1",
+      "anchor_id": "A-404",
+      "relation": "supports",
+      "summary": "A detached summary without an exact anchor."
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "CL-1",
+      "claim_type": "quantitative",
+      "text": "Accuracy reached 95%.",
+      "status": "supported",
+      "evidence_ids": [],
+      "conditions": []
+    }
+  ],
+  "syntheses": [
+    {
+      "synthesis_id": "SYN-1",
+      "source_ids": ["SRC-1"],
+      "evidence_ids": ["EV-1"],
+      "shared_dimensions": [],
+      "agreements": [],
+      "conflicts": [],
+      "conflict_assessment": "",
+      "boundary": ""
+    }
+  ],
+  "paragraph_contracts": [
+    {
+      "paragraph_id": "PAR-1",
+      "contract_type": "content",
+      "job": "Write the conclusion.",
+      "claim_ids": ["CL-404"],
+      "evidence_ids": ["EV-404"],
+      "limitations": [],
+      "transition": ""
+    }
+  ],
+  "revision_items": [
+    {
+      "issue_id": "REV-1",
+      "status": "completed",
+      "action": "Revised.",
+      "change_refs": [],
+      "evidence_ids": []
+    }
+  ]
+}

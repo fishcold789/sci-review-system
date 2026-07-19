@@ -131,13 +131,18 @@ with a `supersedes` relation.
 Treat `work-units/unit-registry.json` as the sole routing and contract source.
 Use `scripts/sci_review_runtime.py` for `capability-preflight`,
 `record-capability`, `register-source`, `record-lookup`, `set-journal-status`,
-`start-unit`, `register-artifact`, `record-decision`, `record-gate`,
+`plan-reaudit`, `start-unit`, `register-artifact`, `record-decision`, `record-gate`,
 `complete-unit`, and `handoff`. Never claim in
 chat that a unit passed, completed, or handed off unless the runtime persisted
 that transition. A blocked unit may use only a registered escalation handoff.
 Only gates listed in the registry may block a runtime transition. Treat extra
 agent-authored checks as advisory until they are mapped to a required gate; do
 not stop or self-declare `PASS` because of an invented check.
+
+At unit start, read the returned `required_quality_checks`. Record each listed
+check id on the gate kind defined in the registry, with evidence bound to the
+current artifact. A generic gate verdict without the required check ids cannot
+complete the unit.
 
 ## Structured artifact rules
 
@@ -176,14 +181,14 @@ journal facts. Mark unsupported content for uncertainty triage or human review.
 Reviews may support taxonomy, history, and context; source experiments must
 support source-specific quantitative claims.
 
-The core skill is field-neutral. Match profiles through
-`project-profiles/index.json`, then load only the selected profile file. Record
-the profile id, version, path, and selection reason in project state; use an
-explicit null profile when no domain profile matches. A profile may define terminology, mechanism layers,
-comparison dimensions, quantitative conditions, and prohibited equivalences;
-it may not replace the review protocol, evidence policy, uncertainty gate, or
-claim-evidence contract. The flexible curved-surface ultrasonic profile lives
-at `project-profiles/flexible-curved-ultrasonic.md`.
+The core skill is field-neutral. Match a profile only when it is explicitly
+registered for the current project; do not infer domain knowledge from a
+directory name or a keyword alone. Load only the selected profile, record its
+id, version, path, and selection reason in project state, and use an explicit
+null profile when no profile is active. A profile may define terminology,
+mechanism layers, comparison dimensions, quantitative conditions, and
+prohibited equivalences; it may not replace the review protocol, evidence
+policy, uncertainty gate, or claim-evidence contract.
 
 Use claim/evidence records rather than prose memory:
 
@@ -253,7 +258,9 @@ the explicit script path must work when hooks are unavailable.
 The bundled checks include `uncertainty_triage.py`, `resolve_checkpoint.py`,
 `build_dashboard.py`,
 `check_numbers_and_units.py`, `check_protected_spans.py`,
-`check_citations.py`, and `validate_artifacts.py`. A script can detect a
+`check_citations.py`, `validate_artifacts.py`, and
+`audit_research_bundle.py`. Use the last script when a structured research
+bundle should prove the complete source-to-revision trace. A script can detect a
 problem; it cannot make an expert judgment or turn a `BLOCK` into a `PASS`.
 
 `check:*` text is never sufficient evidence for a required gate. External
@@ -336,6 +343,13 @@ baseline, and which audits must be rerun. A resolved checkpoint does not reopen
 the whole project automatically; route only the affected units and then update
 the handoff and state.
 
+After any material change to protocol, scope, sources, evidence, claims,
+numbers, structure, language, citations, visuals, journal/package basis, or an
+editorial response, run `plan-reaudit` in preview mode. Apply the plan only after
+the change scope is correct. Applying a plan marks only previously completed
+affected units as `re_audit_required`; historical gates remain preserved as
+evidence but cannot stand for the changed material.
+
 ## Collaboration
 
 When the user has authorized delegation and the task supports independent
@@ -350,10 +364,9 @@ agents agreeing as evidence of truth.
 
 Read only the references needed for the active work unit:
 
-- optional domain mechanisms and comparison boundaries:
-  `project-profiles/index.json`, then the selected
-  `project-profiles/<profile>.md` (for example
-  `project-profiles/flexible-curved-ultrasonic.md`);
+- optional project profiles and comparison boundaries:
+  `project-profiles/index.json`, then the explicitly selected
+  `project-profiles/<profile>.md`;
 - review method and eligibility: `references/review-methodology.md`;
 - evidence, uncertainty, and reading policy: `references/evidence-policy.md`,
   `references/source-obligation-and-capabilities.md`,

@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "scripts" / "sci_review_runtime.py"
+CONTENT_AUDIT = ROOT / "scripts" / "audit_research_bundle.py"
 
 
 def check(name: str, condition: bool, detail: str) -> dict[str, object]:
@@ -23,6 +24,16 @@ def check(name: str, condition: bool, detail: str) -> dict[str, object]:
 def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-X", "utf8", str(RUNTIME), *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+
+def run_content_audit(path: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-X", "utf8", str(CONTENT_AUDIT), str(path)],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -102,7 +113,7 @@ def runtime_contract_smoke() -> tuple[bool, str]:
         artifact = write_markdown_artifact(project, "scope", "review-protocol.md", artifact_id, "review_protocol", "review-protocol", run_id, "contract-smoke")
         expect("register protocol", run_cli("register-artifact", str(project), "review-protocol", artifact_id, "review_protocol", str(artifact)), {0})
         expect(
-            "science gate",
+            "generic science gate",
             run_cli("record-gate", str(project), "review-protocol", "science", "PASS", "--check", "protocol-fields", "--evidence", f"artifact:{artifact_id}"),
             {0},
         )
@@ -119,6 +130,12 @@ def runtime_contract_smoke() -> tuple[bool, str]:
         expect(
             "human gate with decision",
             run_cli("record-gate", str(project), "review-protocol", "human", "PASS", "--decision-id", "D-001", "--evidence", "decision:D-001"),
+            {0},
+        )
+        expect("generic gate name cannot satisfy stage quality", run_cli("complete-unit", str(project), "review-protocol"), {2})
+        expect(
+            "stage-specific science gate",
+            run_cli("record-gate", str(project), "review-protocol", "science", "PASS", "--check", "scope-and-method", "--evidence", f"artifact:{artifact_id}"),
             {0},
         )
         expect("complete protocol", run_cli("complete-unit", str(project), "review-protocol"), {0})
@@ -139,7 +156,7 @@ def runtime_contract_smoke() -> tuple[bool, str]:
         intake_artifact = write_markdown_artifact(blocker_project, "control", "intake.md", intake_id, "intake_snapshot", "intake-recover", blocker_run_id, "blocker-smoke")
         expect("register intake", run_cli("register-artifact", str(blocker_project), "intake-recover", intake_id, "intake_snapshot", str(intake_artifact)), {0})
         expect("mechanics block", run_cli("record-gate", str(blocker_project), "intake-recover", "mechanics", "BLOCK", "--check", "manifest", "--evidence", f"artifact:{intake_id}"), {2})
-        expect("mechanics re-review pass", run_cli("record-gate", str(blocker_project), "intake-recover", "mechanics", "PASS", "--check", "manifest-repaired", "--evidence", f"artifact:{intake_id}"), {0})
+        expect("mechanics re-review pass", run_cli("record-gate", str(blocker_project), "intake-recover", "mechanics", "PASS", "--check", "project-recoverability", "--evidence", f"artifact:{intake_id}"), {0})
         expect("complete after re-review", run_cli("complete-unit", str(blocker_project), "intake-recover"), {0})
         blocker_state = json.loads(blocker_state_path.read_text(encoding="utf-8"))
         if any(item.get("kind") == "gate" and item.get("status") == "open" for item in blocker_state.get("blockers", [])):
@@ -166,10 +183,10 @@ def runtime_contract_smoke() -> tuple[bool, str]:
         expect("read-only mutation", run_cli("start-unit", str(readonly_project), "review-protocol"), {2})
 
         profile_project = temp_root / "profile-project"
-        expect("profile init", run_cli("init", str(profile_project), "--project-id", "profile-smoke", "--title", "柔性曲面超声探测综述", "--intent", "review conformal ultrasonic arrays"), {0})
+        expect("domain-keyword init", run_cli("init", str(profile_project), "--project-id", "profile-smoke", "--title", "柔性曲面超声探测综述", "--intent", "review conformal ultrasonic arrays"), {0})
         profile_state = json.loads((profile_project / ".sci-review-system" / "state" / "project_state.json").read_text(encoding="utf-8"))
-        if profile_state.get("project_profile", {}).get("profile_id") != "flexible-curved-ultrasonic":
-            failures.append("domain profile was not selected from the lightweight index")
+        if profile_state.get("project_profile") is not None:
+            failures.append("domain keywords unexpectedly activated a runtime profile")
         profile_state.setdefault("blockers", []).append({"blocker_id": "U-SMOKE", "kind": "uncertainty", "status": "open", "affected_unit_ids": ["scope-question"], "message": "scope claim needs expert review"})
         profile_state_path = profile_project / ".sci-review-system" / "state" / "project_state.json"
         profile_state_path.write_text(json.dumps(profile_state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -208,7 +225,8 @@ def robustness_contract_smoke() -> tuple[bool, str]:
         search_log = write_markdown_artifact(search, "sources", "search-log.md", search_log_id, "search_log", "search-provenance", search_state["run_id"], search_state["project_id"])
         expect("register search log", run_cli("register-artifact", str(search), "search-provenance", search_log_id, "search_log", str(search_log)), {0})
         for kind in ("mechanics", "science"):
-            expect(f"search {kind} gate", run_cli("record-gate", str(search), "search-provenance", kind, "PASS", "--check", f"{kind}-check", "--evidence", f"artifact:{search_log_id}"), {0})
+            check_id = "source-provenance" if kind == "mechanics" else "science-check"
+            expect(f"search {kind} gate", run_cli("record-gate", str(search), "search-provenance", kind, "PASS", "--check", check_id, "--evidence", f"artifact:{search_log_id}"), {0})
         expect("search completion blocked without actual lookup", run_cli("complete-unit", str(search), "search-provenance"), {2}, "PASS lookup records")
         trace = search / "sources" / "lookup-trace.txt"
         trace.write_text("Executed user-assisted database query; captured one verified result.\n", encoding="utf-8")
@@ -226,6 +244,41 @@ def robustness_contract_smoke() -> tuple[bool, str]:
         ), {0})
         expect("complete search with actual lookup", run_cli("complete-unit", str(search), "search-provenance"), {0})
 
+        preview_state = json.loads(search_state_path.read_text(encoding="utf-8"))
+        preview_version = preview_state["state_version"]
+        expect("preview scope re-audit", run_cli(
+            "plan-reaudit", str(search), "RAP-001", "--source-unit", "search-provenance", "--change-type", "scope",
+            "--artifact-id", search_log_id, "--reason", "The research scope changed after the first search"
+        ), {0}, "search-provenance")
+        preview_state = json.loads(search_state_path.read_text(encoding="utf-8"))
+        if preview_state["state_version"] != preview_version or "RAP-001" in preview_state.get("re_audit_plans", {}):
+            failures.append("re-audit preview mutated project state")
+        expect("apply scope re-audit", run_cli(
+            "plan-reaudit", str(search), "RAP-001", "--source-unit", "search-provenance", "--change-type", "scope",
+            "--artifact-id", search_log_id, "--reason", "The research scope changed after the first search", "--apply"
+        ), {0}, "APPLIED")
+        stale_state = json.loads(search_state_path.read_text(encoding="utf-8"))
+        stale_plan = stale_state.get("re_audit_plans", {}).get("RAP-001", {})
+        if stale_state.get("units", {}).get("search-provenance", {}).get("status") != "re_audit_required":
+            failures.append("completed affected unit was not marked re_audit_required")
+        if "search-provenance" not in stale_plan.get("affected_unit_ids", []) or not stale_plan.get("invalidated_gate_ids"):
+            failures.append("re-audit plan did not retain affected units and invalidated gates")
+        expect("stale search cannot hand off", run_cli("handoff", str(search), "search-provenance", "corpus-curation"), {2}, "re_audit_required")
+        expect("restart stale search", run_cli("start-unit", str(search), "search-provenance"), {0}, "RAP-001")
+        refreshed_log_id = "search-log__scope-v2__candidate__v0.2.0"
+        refreshed_log = write_markdown_artifact(search, "sources", "search-log-v2.md", refreshed_log_id, "search_log", "search-provenance", search_state["run_id"], search_state["project_id"])
+        refreshed_manifest_id = "source-manifest__scope-v2__candidate__v0.2.0"
+        refreshed_manifest = write_markdown_artifact(search, "sources", "source-manifest-v2.md", refreshed_manifest_id, "source_manifest", "search-provenance", search_state["run_id"], search_state["project_id"])
+        expect("register refreshed search log", run_cli("register-artifact", str(search), "search-provenance", refreshed_log_id, "search_log", str(refreshed_log)), {0})
+        expect("register refreshed source manifest", run_cli("register-artifact", str(search), "search-provenance", refreshed_manifest_id, "source_manifest", str(refreshed_manifest)), {0})
+        expect("refreshed search mechanics gate", run_cli("record-gate", str(search), "search-provenance", "mechanics", "PASS", "--check", "source-provenance", "--evidence", f"artifact:{refreshed_log_id}"), {0})
+        expect("refreshed search science gate", run_cli("record-gate", str(search), "search-provenance", "science", "PASS", "--check", "science-check", "--evidence", f"artifact:{refreshed_log_id}"), {0})
+        expect("complete search re-audit", run_cli("complete-unit", str(search), "search-provenance"), {0}, "RAP-001")
+        resolved_state = json.loads(search_state_path.read_text(encoding="utf-8"))
+        if resolved_state.get("re_audit_plans", {}).get("RAP-001", {}).get("status") != "resolved":
+            failures.append("re-audit plan did not resolve after every stale unit completed")
+        expect("handoff succeeds after re-audit", run_cli("handoff", str(search), "search-provenance", "corpus-curation"), {0})
+
         package = temp_root / "package-project"
         expect("package init", run_cli("init", str(package), "--project-id", "package-smoke", "--title", "Existing manuscript", "--intent", "package using my template", "--mode", "checkpoint"), {0})
         package_state_path = package / ".sci-review-system" / "state" / "project_state.json"
@@ -237,7 +290,7 @@ def robustness_contract_smoke() -> tuple[bool, str]:
         baseline = write_markdown_artifact(package, "control", "baseline.md", baseline_id, "baseline_manuscript", "intake-recover", package_state["run_id"], package_state["project_id"])
         expect("register package intake", run_cli("register-artifact", str(package), "intake-recover", intake_id, "intake_snapshot", str(intake)), {0})
         expect("register baseline manuscript", run_cli("register-artifact", str(package), "intake-recover", baseline_id, "baseline_manuscript", str(baseline)), {0})
-        expect("intake gate", run_cli("record-gate", str(package), "intake-recover", "mechanics", "PASS", "--evidence", f"artifact:{intake_id}"), {0})
+        expect("intake gate", run_cli("record-gate", str(package), "intake-recover", "mechanics", "PASS", "--check", "project-recoverability", "--evidence", f"artifact:{intake_id}"), {0})
         expect("complete intake", run_cli("complete-unit", str(package), "intake-recover"), {0})
         expect("unknown journal adaptation is skipped", run_cli("start-unit", str(package), "journal-fit"), {2}, "not_selected")
         expect("template package starts without selected journal", run_cli("start-unit", str(package), "submission-package"), {0})
@@ -248,7 +301,7 @@ def robustness_contract_smoke() -> tuple[bool, str]:
             "package_bases": [], "items": [], "mappings": [], "conflicts": [],
             "user_control": {"final_shape_owner": "user", "shape_confirmed": False, "submission_actor": "user", "system_may_submit": False}, "updated_at": "2026-07-19T00:00:00+08:00"
         })
-        expect("package cannot invent a universal shape", run_cli("register-artifact", str(package), "submission-package", invalid_plan_id, "package_plan", str(invalid_plan)), {2}, "non-empty")
+        expect("package cannot invent a universal shape", run_cli("register-artifact", str(package), "submission-package", invalid_plan_id, "package_plan", str(invalid_plan)), {2}, "user manifest")
         plan_id = "package-plan__user-template__candidate__v0.1.0"
         plan = write_json_artifact(package, "delivery", "package-plan.json", {
             "schema_version": "1.0", "package_plan_id": "PP-user-template", "project_id": package_state["project_id"], "status": "user_confirmed",
@@ -271,7 +324,8 @@ def robustness_contract_smoke() -> tuple[bool, str]:
             expect(f"register package {label}", run_cli("register-artifact", str(package), "submission-package", artifact_id, artifact_type, str(path)), {0})
         expect("package decision", run_cli("record-decision", str(package), "D-PKG", "--kind", "package", "--question", "Approve package shape?", "--answer", "Approved", "--actor", "user"), {0})
         for kind in ("science", "language", "mechanics", "rights_submission"):
-            expect(f"package {kind} gate", run_cli("record-gate", str(package), "submission-package", kind, "PASS", "--evidence", f"artifact:{report_id}"), {0})
+            check_id = "venue-and-package-basis" if kind == "rights_submission" else f"{kind}-check"
+            expect(f"package {kind} gate", run_cli("record-gate", str(package), "submission-package", kind, "PASS", "--check", check_id, "--evidence", f"artifact:{report_id}"), {0})
         expect("package human gate", run_cli("record-gate", str(package), "submission-package", "human", "PASS", "--decision-id", "D-PKG", "--evidence", "decision:D-PKG"), {0})
         expect("complete template-driven package", run_cli("complete-unit", str(package), "submission-package"), {0})
         expect("editorial intake blocks without actual letter", run_cli("start-unit", str(package), "editorial-decision-intake"), {2}, "source_errors")
@@ -315,13 +369,136 @@ def robustness_contract_smoke() -> tuple[bool, str]:
         guide = write_markdown_artifact(journal, "journal", "guideline.md", guide_id, "author_guideline_snapshot", "journal-fit", journal_state["run_id"], journal_state["project_id"])
         expect("register journal profile", run_cli("register-artifact", str(journal), "journal-fit", profile_id, "journal_profile", str(profile)), {0})
         expect("register journal snapshot", run_cli("register-artifact", str(journal), "journal-fit", guide_id, "author_guideline_snapshot", str(guide)), {0})
-        expect("journal rights gate", run_cli("record-gate", str(journal), "journal-fit", "rights_submission", "PASS", "--evidence", f"artifact:{profile_id}"), {0})
+        expect("journal rights gate", run_cli("record-gate", str(journal), "journal-fit", "rights_submission", "PASS", "--check", "venue-and-package-basis", "--evidence", f"artifact:{profile_id}"), {0})
         expect("journal human gate", run_cli("record-gate", str(journal), "journal-fit", "human", "PASS", "--decision-id", "D-JRN", "--evidence", "decision:D-JRN"), {0})
         expect("stale official source blocks completion", run_cli("complete-unit", str(journal), "journal-fit"), {2}, "missing verified source")
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
     return not failures, "capability, lookup, optional journal, flexible package, editorial-source, and freshness contracts" if not failures else "; ".join(failures)
+
+
+def stage_quality_contracts(registry: dict[str, object], units: list[dict[str, object]]) -> tuple[bool, str]:
+    definitions = registry.get("quality_check_definitions", {})
+    mappings = registry.get("unit_quality_checks", {})
+    gate_definitions = registry.get("gate_definitions", {})
+    unit_by_id = {unit["unit_id"]: unit for unit in units}
+    missing_mappings = sorted(set(unit_by_id) - set(mappings))
+    unknown_mapping_units = sorted(set(mappings) - set(unit_by_id))
+    undefined_checks: list[str] = []
+    unreachable_checks: list[str] = []
+    malformed_definitions: list[str] = []
+    used_checks: set[str] = set()
+    for unit_id, check_ids in mappings.items():
+        if not isinstance(check_ids, list) or not check_ids:
+            unreachable_checks.append(f"{unit_id}:empty")
+            continue
+        for check_id in check_ids:
+            used_checks.add(check_id)
+            definition = definitions.get(check_id)
+            if not definition:
+                undefined_checks.append(f"{unit_id}:{check_id}")
+                continue
+            gate_kind = definition.get("gate_kind")
+            if gate_kind not in gate_definitions or not definition.get("evaluator") or not definition.get("pass_condition"):
+                malformed_definitions.append(check_id)
+            if unit_id in unit_by_id and gate_kind not in unit_by_id[unit_id].get("required_gates", []):
+                unreachable_checks.append(f"{unit_id}:{check_id}->{gate_kind}")
+    unused_definitions = sorted(set(definitions) - used_checks)
+    runtime = RUNTIME.read_text(encoding="utf-8")
+    enforcement_present = all(token in runtime for token in ("def quality_check_failures", "required_quality_checks", "quality_check_failures"))
+    ok = not any((missing_mappings, unknown_mapping_units, undefined_checks, unreachable_checks, malformed_definitions, unused_definitions)) and enforcement_present
+    detail = {
+        "definitions": len(definitions),
+        "mapped_units": len(mappings),
+        "missing_mappings": missing_mappings,
+        "unknown_mapping_units": unknown_mapping_units,
+        "undefined_checks": undefined_checks,
+        "unreachable_checks": unreachable_checks,
+        "malformed_definitions": sorted(set(malformed_definitions)),
+        "unused_definitions": unused_definitions,
+        "runtime_enforcement": enforcement_present,
+    }
+    return ok, json.dumps(detail, ensure_ascii=False, separators=(",", ":"))
+
+
+def change_impact_contracts(registry: dict[str, object], units: list[dict[str, object]], skill: str) -> tuple[bool, str]:
+    rules = registry.get("change_impact_rules", {})
+    unit_ids = {unit["unit_id"] for unit in units}
+    gate_kinds = set(registry.get("gate_definitions", {}))
+    schema = json.loads((ROOT / "schemas" / "re-audit-plan.schema.json").read_text(encoding="utf-8"))
+    schema_types = set(schema["properties"]["change_types"]["items"]["enum"])
+    rule_types = set(rules)
+    malformed: list[str] = []
+    unknown_units: dict[str, list[str]] = {}
+    unknown_gates: dict[str, list[str]] = {}
+    for change_type, rule in rules.items():
+        affected = rule.get("affected_units", [])
+        required_gates = rule.get("required_gate_kinds", [])
+        if not affected or not required_gates or not rule.get("reason"):
+            malformed.append(change_type)
+        invalid_units = sorted(set(affected) - unit_ids)
+        invalid_gates = sorted(set(required_gates) - gate_kinds)
+        if invalid_units:
+            unknown_units[change_type] = invalid_units
+        if invalid_gates:
+            unknown_gates[change_type] = invalid_gates
+    runtime = RUNTIME.read_text(encoding="utf-8")
+    runtime_support = all(token in runtime for token in ("def plan_reaudit", 'rule.get("affected_units"', 'status"] = "re_audit_required"', 'plan["status"] = "resolved"'))
+    skill_support = "`plan-reaudit`" in skill and "re_audit_required" in skill
+    ok = rule_types == schema_types and not malformed and not unknown_units and not unknown_gates and runtime_support and skill_support
+    detail = {
+        "rules": len(rules),
+        "schema_mismatch": sorted(rule_types.symmetric_difference(schema_types)),
+        "malformed": malformed,
+        "unknown_units": unknown_units,
+        "unknown_gates": unknown_gates,
+        "runtime_support": runtime_support,
+        "skill_support": skill_support,
+    }
+    return ok, json.dumps(detail, ensure_ascii=False, separators=(",", ":"))
+
+
+def content_forward_smoke() -> tuple[bool, str]:
+    pass_path = ROOT / "evals" / "fixtures" / "research-content-pass.json"
+    fail_path = ROOT / "evals" / "fixtures" / "research-content-fail.json"
+    passed = run_content_audit(pass_path)
+    failed = run_content_audit(fail_path)
+    try:
+        pass_result = json.loads(passed.stdout)
+        fail_result = json.loads(failed.stdout)
+    except json.JSONDecodeError as exc:
+        return False, f"content audit emitted invalid JSON: {exc}"
+    required_failures = {
+        "ANCHOR_LOCATOR_REQUIRED",
+        "UNKNOWN_ANCHOR",
+        "CLAIM_EVIDENCE_REQUIRED",
+        "NUMERIC_CONDITIONS_REQUIRED",
+        "SYNTHESIS_SOURCE_COUNT",
+        "SYNTHESIS_DIMENSIONS_REQUIRED",
+        "SYNTHESIS_CONFLICT_ASSESSMENT_REQUIRED",
+        "SYNTHESIS_BOUNDARY_REQUIRED",
+        "UNKNOWN_CLAIM",
+        "REVISION_CHANGE_REF_REQUIRED",
+        "REVISION_EVIDENCE_REQUIRED",
+    }
+    observed_failures = {item.get("code") for item in fail_result.get("issues", [])}
+    ok = (
+        passed.returncode == 0
+        and pass_result.get("verdict") == "PASS"
+        and not pass_result.get("issues")
+        and failed.returncode == 1
+        and fail_result.get("verdict") == "BLOCK"
+        and required_failures.issubset(observed_failures)
+    )
+    detail = {
+        "pass_code": passed.returncode,
+        "pass_verdict": pass_result.get("verdict"),
+        "fail_code": failed.returncode,
+        "fail_verdict": fail_result.get("verdict"),
+        "missing_expected_failures": sorted(required_failures - observed_failures),
+    }
+    return ok, json.dumps(detail, ensure_ascii=False, separators=(",", ":"))
 
 
 def main() -> int:
@@ -346,6 +523,7 @@ def main() -> int:
         "sci-review-system", "start-unit", "register-artifact", "record-decision", "record-gate",
         "complete-unit", "project-profiles", "capability-preflight", "record-capability", "register-source",
         "record-lookup", "set-journal-status", "research-backed", "human-verified", "submission-ready",
+        "plan-reaudit",
     }
     referenced_units: set[str] = set()
     for path in (ROOT / "SKILL.md", ROOT / "orchestration" / "intent-router.md"):
@@ -371,17 +549,20 @@ def main() -> int:
     references = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "references").glob("*.md"))
     protection = all(token in references for token in ("numbers", "units", "formulas", "citations", "causality"))
     runtime = RUNTIME.read_text(encoding="utf-8")
-    runtime_ok = all(token in runtime for token in ("init", "validate-state", "suggest-name", "append_event", "route", "register-artifact", "record-decision", "record-gate", "complete-unit", "handoff"))
+    runtime_ok = all(token in runtime for token in ("init", "validate-state", "suggest-name", "append_event", "route", "register-artifact", "record-decision", "record-gate", "plan-reaudit", "complete-unit", "handoff"))
     uncertainty_ref = (ROOT / "references" / "uncertainty-escalation.md").read_text(encoding="utf-8")
     uncertainty_ok = all(token in uncertainty_ref for token in ("verified", "uncertain", "human_review_required", "human_checkpoint")) and (ROOT / "schemas" / "uncertainty-record.schema.json").exists() and (ROOT / "schemas" / "human-checkpoint.schema.json").exists()
     review_protocol_ok = (ROOT / "references" / "review-methodology.md").exists() and (ROOT / "schemas" / "review-protocol.schema.json").exists() and "scope-and-eligibility" in next(unit["next_candidates"] for unit in units if unit["unit_id"] == "review-protocol")
     generic_files = skill + "\n" + "\n".join((ROOT / "references" / name).read_text(encoding="utf-8") for name in ("evidence-policy.md", "review-synthesis.md", "quantitative-audit.md"))
     domain_hardcoding = any(token in generic_files for token in ("material, defect, frequency, sensor, curvature, coupling", "clearer signal       != more accurate sizing", "sharper image        != smaller localization error"))
     profile_index = json.loads((ROOT / "project-profiles" / "index.json").read_text(encoding="utf-8"))
-    generic_core = "name: sci-review-system" in skill and "# SCI Review System" in skill and not domain_hardcoding and bool(profile_index.get("profiles"))
+    generic_core = "name: sci-review-system" in skill and "# SCI Review System" in skill and not domain_hardcoding and isinstance(profile_index.get("profiles"), list)
     contract_registry = all(key in registry for key in ("contract_defaults", "gate_definitions", "block_transitions", "unit_write_roots", "start_requirements", "completion_outputs"))
     runtime_smoke_ok, runtime_smoke_detail = runtime_contract_smoke()
     robustness_smoke_ok, robustness_smoke_detail = robustness_contract_smoke()
+    stage_quality_ok, stage_quality_detail = stage_quality_contracts(registry, units)
+    change_impact_ok, change_impact_detail = change_impact_contracts(registry, units, skill)
+    content_smoke_ok, content_smoke_detail = content_forward_smoke()
 
     results = [
         check("skill-frontmatter", frontmatter, "root metadata present"),
@@ -394,8 +575,11 @@ def main() -> int:
         check("language-protection", protection, "language references contain protected-span rules"),
         check("runtime-contracts", runtime_ok, "runtime helper exposes enforced transition commands"),
         check("contract-registry", contract_registry, "registry carries gate definitions, block paths, prerequisites, outputs, and write scopes"),
+        check("stage-quality-contracts", stage_quality_ok, stage_quality_detail),
+        check("change-impact-contracts", change_impact_ok, change_impact_detail),
         check("runtime-contract-smoke", runtime_smoke_ok, runtime_smoke_detail),
         check("robustness-contract-smoke", robustness_smoke_ok, robustness_smoke_detail),
+        check("content-forward-smoke", content_smoke_ok, content_smoke_detail),
         check("uncertainty-escalation", uncertainty_ok, "uncertainty states and human checkpoint contracts present"),
         check("review-protocol", review_protocol_ok, "review protocol routes to eligibility before broad retrieval"),
     ]

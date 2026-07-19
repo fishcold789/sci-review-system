@@ -50,13 +50,6 @@ STRUCTURED_JSON_REQUIRED_FIELDS = {
     "editorial_decision": {"decision_id", "input_state", "source", "journal", "manuscript", "decision", "comment_index", "revision_context", "response_controls", "created_at", "updated_at"},
     "editorial_comment_map": {"comment_map_id", "decision_id", "decision_record_ref", "source_confirmation", "manuscript_baseline", "revision_artifact", "formal_reply_state", "comments", "global_reaudits", "human_control", "updated_at"},
 }
-STRUCTURED_JSON_SCHEMAS = {
-    "journal_profile": "venue-profile.schema.json",
-    "package_plan": "package-plan.schema.json",
-    "submission_check_report": "submission-check-report.schema.json",
-    "editorial_decision": "editorial-decision.schema.json",
-    "editorial_comment_map": "editorial-comment-map.schema.json",
-}
 
 
 def now_iso() -> str:
@@ -258,6 +251,7 @@ def init_project(args: argparse.Namespace) -> int:
         "uncertainties": {},
         "human_checkpoints": {},
         "pause_records": [],
+        "re_audit_plans": {},
         "decisions": [],
         "blockers": [],
         "policy": {
@@ -327,6 +321,41 @@ def start_requirements_for_mode(registry: dict[str, Any], unit_id: str, mode: st
 def latest_gate(state: dict[str, Any], unit_id: str, kind: str, gate_ids: set[str] | None = None) -> dict[str, Any] | None:
     matches = [gate for key, gate in state.get("gates", {}).items() if gate.get("unit_id") == unit_id and gate.get("kind") == kind and (gate_ids is None or key in gate_ids)]
     return sorted(matches, key=lambda item: item.get("created_at", ""))[-1] if matches else None
+
+
+def quality_check_failures(
+    registry: dict[str, Any],
+    state: dict[str, Any],
+    unit_id: str,
+    gate_ids: set[str],
+) -> list[dict[str, Any]]:
+    failures: list[dict[str, Any]] = []
+    definitions = registry.get("quality_check_definitions", {})
+    required_checks = registry.get("unit_quality_checks", {}).get(unit_id, [])
+    for check_id in required_checks:
+        definition = definitions.get(check_id)
+        if not definition:
+            failures.append({"check_id": check_id, "error": "quality check definition is missing"})
+            continue
+        kind = definition.get("gate_kind")
+        gate = latest_gate(state, unit_id, kind, gate_ids)
+        accepted = set(
+            registry.get("gate_definitions", {})
+            .get(kind, {})
+            .get("accepted_verdicts", registry.get("contract_defaults", {}).get("accepted_completion_verdicts", ["PASS"]))
+        )
+        recorded_checks = {item.get("check_id") for item in (gate or {}).get("checks", [])}
+        if gate is None or gate.get("verdict") not in accepted or check_id not in recorded_checks:
+            failures.append(
+                {
+                    "check_id": check_id,
+                    "gate_kind": kind,
+                    "evaluator": definition.get("evaluator"),
+                    "pass_condition": definition.get("pass_condition"),
+                    "latest_gate": gate,
+                }
+            )
+    return failures
 
 
 def open_uncertainty_blockers(state: dict[str, Any]) -> list[dict[str, Any]]:
@@ -488,40 +517,11 @@ def parse_markdown_frontmatter(path: Path) -> dict[str, str]:
     return {}
 
 
-def json_schema_errors(data: Any, artifact_type: str) -> list[str]:
-    schema_name = STRUCTURED_JSON_SCHEMAS.get(artifact_type)
-    if schema_name is None:
-        return []
-    try:
-        from jsonschema import Draft202012Validator
-    except ImportError:
-        return ["JSON Schema validation is unavailable; install requirements.txt"]
-
-    schema_path = SKILL_ROOT / "schemas" / schema_name
-    try:
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        validator = Draft202012Validator(schema)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        return [f"cannot load JSON Schema {schema_name}: {exc}"]
-
-    errors: list[str] = []
-    for issue in sorted(validator.iter_errors(data), key=lambda item: list(item.absolute_path)):
-        location = "$" + "".join(
-            f"[{part}]" if isinstance(part, int) else f".{part}"
-            for part in issue.absolute_path
-        )
-        errors.append(f"{artifact_type} schema {location}: {issue.message}")
-    return errors
-
-
 def structured_json_errors(data: Any, artifact_type: str) -> list[str]:
     if artifact_type not in STRUCTURED_JSON_REQUIRED_FIELDS:
         return []
     if not isinstance(data, dict):
         return [f"{artifact_type} must be a JSON object"]
-    schema_errors = json_schema_errors(data, artifact_type)
-    if schema_errors:
-        return schema_errors
     errors: list[str] = []
     missing = sorted(STRUCTURED_JSON_REQUIRED_FIELDS[artifact_type] - set(data))
     if missing:
@@ -746,6 +746,45 @@ def validate_state(args: argparse.Namespace) -> int:
             errors.append(f"handoff {handoff_id} missing fields: {', '.join(missing_handoff)}")
         if handoff.get("run_id") != state.get("run_id"):
             errors.append(f"handoff {handoff_id} is not bound to the current run")
+    for plan_id, plan in state.get("re_audit_plans", {}).items():
+        required_plan_fields = {
+            "schema_version", "plan_id", "source_unit_id", "change_types", "changed_artifact_ids",
+            "affected_claim_ids", "affected_sections", "reason", "rule_reasons", "affected_unit_ids",
+            "required_gate_kinds", "invalidated_gate_ids", "status", "created_at", "run_id",
+        }
+        missing_plan_fields = sorted(required_plan_fields - set(plan))
+        if missing_plan_fields:
+            errors.append(f"re-audit plan {plan_id} missing fields: {', '.join(missing_plan_fields)}")
+        if plan.get("plan_id") != plan_id:
+            errors.append(f"re-audit plan key/id mismatch: {plan_id}")
+        if plan.get("run_id") != state.get("run_id"):
+            errors.append(f"re-audit plan {plan_id} is not bound to the current run")
+        if plan.get("source_unit_id") not in units:
+            errors.append(f"re-audit plan {plan_id} references an unknown source unit")
+        unknown_change_types = sorted(set(plan.get("change_types", [])) - set(registry.get("change_impact_rules", {})))
+        if unknown_change_types:
+            errors.append(f"re-audit plan {plan_id} has unknown change types: {', '.join(unknown_change_types)}")
+        for unit_id in plan.get("affected_unit_ids", []):
+            if unit_id not in units:
+                errors.append(f"re-audit plan {plan_id} references unknown affected unit {unit_id}")
+        stale_unit_ids = set(plan.get("stale_unit_ids", []))
+        if stale_unit_ids - set(plan.get("affected_unit_ids", [])):
+            errors.append(f"re-audit plan {plan_id} has stale units outside its affected units")
+        unknown_gate_kinds = sorted(set(plan.get("required_gate_kinds", [])) - set(registry.get("gate_definitions", {})))
+        if unknown_gate_kinds:
+            errors.append(f"re-audit plan {plan_id} has unknown gate kinds: {', '.join(unknown_gate_kinds)}")
+        unknown_gate_ids = sorted(set(plan.get("invalidated_gate_ids", [])) - set(state.get("gates", {})))
+        if unknown_gate_ids:
+            errors.append(f"re-audit plan {plan_id} references unknown invalidated gates: {', '.join(unknown_gate_ids)}")
+        for artifact_id in plan.get("changed_artifact_ids", []):
+            if artifact_id not in state.get("artifacts", {}):
+                errors.append(f"re-audit plan {plan_id} references unknown artifact {artifact_id}")
+        if plan.get("status") not in {"applied", "resolved", "superseded"}:
+            errors.append(f"re-audit plan {plan_id} has an invalid persisted status")
+        if plan.get("status") == "applied" and not stale_unit_ids:
+            errors.append(f"re-audit plan {plan_id} is applied without any stale units")
+        if plan.get("status") == "resolved" and not plan.get("resolved_at"):
+            errors.append(f"re-audit plan {plan_id} is resolved without resolved_at")
     for unit_id in {item.get("source_unit_id", "") for item in state.get("artifacts", {}).values()}:
         for issue in registered_artifact_integrity_errors(state, unit_id):
             errors.append(f"artifact {issue['artifact_id']}: {issue['error']}")
@@ -1069,6 +1108,102 @@ def set_journal_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def plan_reaudit(args: argparse.Namespace) -> int:
+    root = Path(args.project_root).expanduser().resolve()
+    state_path, _, events_path = state_paths(root)
+    if not state_path.exists():
+        print(json.dumps({"status": "BLOCK", "error": f"project state not found: {state_path}"}, ensure_ascii=False))
+        return 1
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    conflict = check_expected_version(state, args.expected_version)
+    if conflict:
+        print(json.dumps(conflict, ensure_ascii=False, indent=2))
+        return 2
+    registry, units = load_registry()
+    if args.source_unit not in units:
+        print(json.dumps({"status": "BLOCK", "error": f"unknown source unit: {args.source_unit}"}, ensure_ascii=False))
+        return 1
+    if not re.fullmatch(r"RAP-[0-9]{3,}", args.plan_id):
+        print(json.dumps({"status": "BLOCK", "error": "plan id must match RAP-<number>"}, ensure_ascii=False))
+        return 2
+    rules = registry.get("change_impact_rules", {})
+    unknown_types = sorted(set(args.change_type) - set(rules))
+    if unknown_types:
+        print(json.dumps({"status": "BLOCK", "error": "unknown change types", "unknown": unknown_types, "known": sorted(rules)}, ensure_ascii=False, indent=2))
+        return 2
+    unknown_artifacts = sorted(set(args.artifact_id) - set(state.get("artifacts", {})))
+    if unknown_artifacts:
+        print(json.dumps({"status": "BLOCK", "error": "changed artifact ids are not registered", "artifact_ids": unknown_artifacts}, ensure_ascii=False, indent=2))
+        return 2
+    affected_units: set[str] = set()
+    required_gate_kinds: set[str] = set()
+    reasons: dict[str, str] = {}
+    for change_type in args.change_type:
+        rule = rules[change_type]
+        affected_units.update(rule.get("affected_units", []))
+        required_gate_kinds.update(rule.get("required_gate_kinds", []))
+        reasons[change_type] = rule.get("reason", "")
+    ordered_units = [unit["unit_id"] for unit in registry.get("units", []) if unit["unit_id"] in affected_units]
+    invalidated_gate_ids = sorted(
+        {
+            gate_id
+            for unit_id in ordered_units
+            for gate_id in state.get("units", {}).get(unit_id, {}).get("gate_ids", [])
+        }
+    )
+    active_affected = [unit_id for unit_id in ordered_units if unit_id == state.get("current_unit_id")]
+    plan = {
+        "schema_version": "0.1",
+        "plan_id": args.plan_id,
+        "source_unit_id": args.source_unit,
+        "change_types": sorted(set(args.change_type)),
+        "changed_artifact_ids": sorted(set(args.artifact_id)),
+        "affected_claim_ids": sorted(set(args.claim_id)),
+        "affected_sections": sorted(set(args.section)),
+        "reason": args.reason,
+        "rule_reasons": reasons,
+        "affected_unit_ids": ordered_units,
+        "required_gate_kinds": sorted(required_gate_kinds),
+        "invalidated_gate_ids": invalidated_gate_ids,
+        "status": "preview",
+        "created_at": now_iso(),
+        "run_id": state.get("run_id"),
+    }
+    if not args.apply:
+        print(json.dumps({"status": "PREVIEW", "plan": plan, "active_affected_units": active_affected}, ensure_ascii=False, indent=2))
+        return 0
+    error = mutation_error(state)
+    if error:
+        print(json.dumps({"status": "BLOCK", "error": error}, ensure_ascii=False, indent=2))
+        return 2
+    if args.plan_id in state.setdefault("re_audit_plans", {}):
+        print(json.dumps({"status": "CONFLICT", "error": f"re-audit plan already exists: {args.plan_id}"}, ensure_ascii=False))
+        return 2
+    if active_affected:
+        print(json.dumps({"status": "BLOCK", "error": "pause or finish the active affected unit before applying a re-audit plan", "active_affected_units": active_affected, "plan": plan}, ensure_ascii=False, indent=2))
+        return 2
+    stale_units: list[str] = []
+    for unit_id in ordered_units:
+        unit_state = state.get("units", {}).get(unit_id)
+        if not unit_state:
+            continue
+        unit_state.setdefault("re_audit_plan_ids", []).append(args.plan_id)
+        if unit_state.get("status") == "completed":
+            unit_state["status"] = "re_audit_required"
+            stale_units.append(unit_id)
+    plan["stale_unit_ids"] = stale_units
+    if stale_units:
+        plan["status"] = "applied"
+    else:
+        plan["status"] = "resolved"
+        plan["resolved_at"] = now_iso()
+    state["re_audit_plans"][args.plan_id] = plan
+    save_state(state_path, state)
+    event = append_event(events_path, "reaudit_planned", {"plan_id": args.plan_id, "source_unit_id": args.source_unit, "change_types": plan["change_types"], "stale_unit_ids": stale_units})
+    print(json.dumps({"status": "APPLIED", "plan": plan, "state_version": state["state_version"], "event_id": event["event_id"]}, ensure_ascii=False, indent=2))
+    return 0
+
+
 def start_unit(args: argparse.Namespace) -> int:
     root = Path(args.project_root).expanduser().resolve()
     state_path, _, events_path = state_paths(root)
@@ -1119,10 +1254,13 @@ def start_unit(args: argparse.Namespace) -> int:
     state["current_unit_id"] = args.unit_id
     state["status"] = "running"
     unit_state = state.setdefault("units", {}).setdefault(args.unit_id, {})
+    re_audit_plan_ids = list(unit_state.get("re_audit_plan_ids", []))
     unit_state.update({"status": "in_progress", "started_at": now_iso(), "contract_version": registry.get("schema_version"), "project_profile": state.get("project_profile"), "iteration": int(unit_state.get("iteration", 0)) + 1, "artifact_ids": [], "gate_ids": []})
     save_state(state_path, state)
     event = append_event(events_path, "work_unit_selected", {"unit_id": args.unit_id, "state_version": state["state_version"]})
-    print(json.dumps({"status": "STARTED", "unit_id": args.unit_id, "project_profile": state.get("project_profile"), "write_root": registry.get("unit_write_roots", {}).get(args.unit_id), "required_outputs": registry.get("completion_outputs", {}).get(args.unit_id, {}), "required_gates": units[args.unit_id].get("required_gates", []), "state_version": state["state_version"], "event_id": event["event_id"]}, ensure_ascii=False, indent=2))
+    quality_ids = registry.get("unit_quality_checks", {}).get(args.unit_id, [])
+    quality_definitions = registry.get("quality_check_definitions", {})
+    print(json.dumps({"status": "STARTED", "unit_id": args.unit_id, "project_profile": state.get("project_profile"), "write_root": registry.get("unit_write_roots", {}).get(args.unit_id), "required_outputs": registry.get("completion_outputs", {}).get(args.unit_id, {}), "required_gates": units[args.unit_id].get("required_gates", []), "required_quality_checks": {check_id: quality_definitions.get(check_id, {}) for check_id in quality_ids}, "re_audit_plans": {plan_id: state.get("re_audit_plans", {}).get(plan_id, {}) for plan_id in re_audit_plan_ids}, "state_version": state["state_version"], "event_id": event["event_id"]}, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -1358,6 +1496,7 @@ def complete_unit(args: argparse.Namespace) -> int:
         accepted = set(registry.get("gate_definitions", {}).get(kind, {}).get("accepted_verdicts", registry.get("contract_defaults", {}).get("accepted_completion_verdicts", ["PASS"])))
         if gate is None or gate.get("verdict") not in accepted or (gate.get("verdict") == "PASS_WITH_CONDITIONS" and not gate.get("human_decision_id")):
             gate_failures.append({"kind": kind, "latest": gate})
+    quality_failures = quality_check_failures(registry, state, args.unit_id, current_gate_ids)
     uncertainty_blockers = uncertainty_blockers_for_unit(registry, unit, state)
     if uncertainty_blockers:
         gate_failures.append({"kind": "uncertainty", "open_blockers": uncertainty_blockers})
@@ -1380,17 +1519,28 @@ def complete_unit(args: argparse.Namespace) -> int:
             if report.get("overall_status") != "PASS":
                 source_errors.append(f"submission package checks are {report.get('overall_status', 'NOT_CHECKED')}, not PASS")
     integrity_errors = registered_artifact_integrity_errors(state, args.unit_id) if registry.get("contract_defaults", {}).get("reject_changed_or_missing_artifacts") else []
-    if missing_all or missing_any or gate_failures or integrity_errors or capability_errors or source_errors:
+    if missing_all or missing_any or gate_failures or quality_failures or integrity_errors or capability_errors or source_errors:
         unit_state["status"] = "awaiting_gate"
         save_state(state_path, state)
-        print(json.dumps({"status": "BLOCK", "error": "completion contract not satisfied", "missing_all_outputs": missing_all, "requires_any_output": missing_any, "gate_failures": gate_failures, "capability_errors": capability_errors, "source_errors": source_errors, "artifact_integrity_errors": integrity_errors, "produced_artifact_types": sorted(produced), "state_version": state["state_version"]}, ensure_ascii=False, indent=2))
+        print(json.dumps({"status": "BLOCK", "error": "completion contract not satisfied", "missing_all_outputs": missing_all, "requires_any_output": missing_any, "gate_failures": gate_failures, "quality_check_failures": quality_failures, "capability_errors": capability_errors, "source_errors": source_errors, "artifact_integrity_errors": integrity_errors, "produced_artifact_types": sorted(produced), "state_version": state["state_version"]}, ensure_ascii=False, indent=2))
         return 2
-    unit_state.update({"status": "completed", "completed_at": now_iso()})
+    completed_at = now_iso()
+    unit_state.update({"status": "completed", "completed_at": completed_at})
     if state.get("current_unit_id") == args.unit_id:
         state["current_unit_id"] = None
+    resolved_plan_ids: list[str] = []
+    for plan_id in unit_state.get("re_audit_plan_ids", []):
+        plan = state.get("re_audit_plans", {}).get(plan_id)
+        if not plan or plan.get("status") != "applied":
+            continue
+        stale_units = plan.get("stale_unit_ids", [])
+        if stale_units and all(state.get("units", {}).get(unit_id, {}).get("status") == "completed" for unit_id in stale_units):
+            plan["status"] = "resolved"
+            plan["resolved_at"] = completed_at
+            resolved_plan_ids.append(plan_id)
     save_state(state_path, state)
-    event = append_event(events_path, "work_unit_completed", {"unit_id": args.unit_id, "state_version": state["state_version"]})
-    print(json.dumps({"status": "COMPLETED", "unit_id": args.unit_id, "next_candidates": unit.get("next_candidates", []), "state_version": state["state_version"], "event_id": event["event_id"]}, ensure_ascii=False, indent=2))
+    event = append_event(events_path, "work_unit_completed", {"unit_id": args.unit_id, "resolved_re_audit_plan_ids": resolved_plan_ids, "state_version": state["state_version"]})
+    print(json.dumps({"status": "COMPLETED", "unit_id": args.unit_id, "resolved_re_audit_plan_ids": resolved_plan_ids, "next_candidates": unit.get("next_candidates", []), "state_version": state["state_version"], "event_id": event["event_id"]}, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -1569,6 +1719,18 @@ def build_parser() -> argparse.ArgumentParser:
     journal.add_argument("--decision-id")
     journal.add_argument("--actor", choices=["user", "advisor", "coauthor"], default="user")
     journal.set_defaults(func=set_journal_status)
+    reaudit = sub.add_parser("plan-reaudit", help="preview or apply downstream re-audits after a material change")
+    reaudit.add_argument("project_root")
+    reaudit.add_argument("plan_id")
+    reaudit.add_argument("--source-unit", required=True)
+    reaudit.add_argument("--change-type", action="append", required=True)
+    reaudit.add_argument("--artifact-id", action="append", default=[])
+    reaudit.add_argument("--claim-id", action="append", default=[])
+    reaudit.add_argument("--section", action="append", default=[])
+    reaudit.add_argument("--reason", required=True)
+    reaudit.add_argument("--apply", action="store_true")
+    reaudit.add_argument("--expected-version", type=int, default=None)
+    reaudit.set_defaults(func=plan_reaudit)
     route = sub.add_parser("route", help="start a semantic work unit after contract checks")
     route.add_argument("project_root")
     route.add_argument("unit_id")

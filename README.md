@@ -166,10 +166,12 @@ python scripts/sci_review_runtime.py --help
 python evals/run_evals.py
 ```
 
+当前版本会把每个阶段必须完成的检查写入运行状态，而不是只在说明文档里提醒。研究范围、证据、主张、数字、结构或投稿要求发生变化时，可以先预览影响范围，再只重审受影响的工作；来源、证据、主张、跨文献综合、段落和返修记录也可以通过结构化内容审计检查是否真正连通。
+
 <details>
 <summary>实现结构</summary>
 
-当前仓库包含 28 个语义工作单元、17 份 JSON Schema 和 14 项合同与鲁棒性评测。
+当前仓库包含 28 个语义工作单元、18 份 JSON Schema 和 17 项合同与鲁棒性评测。
 
 ```text
 SKILL.md             Codex 执行规则和路由入口
@@ -272,6 +274,12 @@ python scripts/sci_review_runtime.py inspect ..\my-review
 python scripts/sci_review_runtime.py --help
 python evals/run_evals.py
 ```
+
+The current runtime enforces stage-specific checks rather than leaving them as
+documentation reminders. Material changes can be previewed and propagated only
+to affected work units, while the structured content audit verifies the chain
+from sources and exact anchors through evidence, claims, synthesis, paragraph
+contracts, and completed revisions.
 
 SCI Review System is human-led. It can extend the amount and range of research
 work that AI can assist with, but it does not replace scientific judgment or

@@ -97,6 +97,10 @@
     "uncertainties": { "type": "object" },
     "human_checkpoints": { "type": "object" },
     "pause_records": { "type": "array", "items": { "type": "object" } },
+    "re_audit_plans": {
+      "type": "object",
+      "additionalProperties": { "$ref": "re-audit-plan.schema.json" }
+    },
     "decisions": { "type": "array", "items": { "type": "object" } },
     "blockers": { "type": "array", "items": { "type": "object" } },
     "policy": { "$ref": "#/$defs/policy" }
