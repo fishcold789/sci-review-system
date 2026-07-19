@@ -1,108 +1,135 @@
-# SCI Review System
+<h1 align="center">SCI Review System</h1>
 
-**把一次次容易丢上下文的科研对话，变成可恢复、可检查、可交接的综述工作区。**
+<p align="center"><strong>让 Codex 辅助一篇 SCI 综述从选题、文献到写作和返修的完整过程。</strong></p>
 
-[中文介绍](#中文介绍) | [English](#english)
+<p align="center">
+从零开始可以用，做到一半可以接，已经有完整稿件也可以直接进入审查、润色或返修。<br>
+你不需要记流程编号，只需要告诉 Codex：这是我的项目，请判断现在做到哪里，然后继续。
+</p>
+
+<p align="center">
+<a href="#它能辅助哪些科研工作">能做什么</a> ·
+<a href="#什么时候接入都可以">从哪里接入</a> ·
+<a href="#操作方式很简单">如何使用</a> ·
+<a href="#最后可以拿到什么">交付内容</a> ·
+<a href="#安装">安装</a> ·
+<a href="#english">English</a>
+</p>
 
 ## 中文介绍
 
-SCI Review System 是一套面向 SCI 综述研究与写作的 Codex 技能和可执行运行时。它把选题、检索、筛选、精读、证据整理、跨文献综合、框架设计、科学写作、中文自然化、英文写作、引用核查、图表管理、期刊适配和编辑反馈处理，组织成 28 个可以独立进入的工作单元。
+SCI Review System 是一套给科研人员使用的 SCI 综述工作流 Skill。你可以把研究方向、关键词、检索记录、RIS/BibTeX、Zotero 文献库、PDF、精读笔记、文章框架、章节草稿或编辑决定信交给它。系统会先检查现有材料，判断项目已经进行到哪一步，再从当前位置继续工作。
 
-这套系统适合从零开始，也适合接手已经做到一半的项目。你可以拿着一个模糊选题进来，也可以直接交给它一份文献库、精读笔记、章节草稿或编辑决定信。它会先识别现有材料和当前阶段，再决定下一步，不要求每次都从固定流程的第一步重来。
+从零开始时，它可以帮助你确定选题、设计检索、整理文献并建立写作框架；项目进行到一半时，它可以接着做筛选分类、文献精读、图表规划和章节写作；稿件成形后，它可以继续完成中文自然化、英文写作、全文检查、期刊适配、投稿材料整理和审稿意见回复。
 
-第一版已经不只是一组提示词。仓库里包含状态机、来源记录、JSON Schema、质量门、人工确认点、哈希校验、可恢复交接和自动评测。研究者可以随时查看它依据了什么、改了什么、哪些结论还不能写、下一步需要谁来判断。
+它的作用很直接：让人工智能真正进入科研工作过程，而不只是等论文写完后改几句话。
 
-> 这是一个由研究者主导的科研写作系统。它可以承担大量整理、比较、起草和检查工作，但不会代替作者判断，也不会承诺录用、投稿成功或任何期刊结果。
+## 它能辅助哪些科研工作
 
-### 它解决什么问题
+| 科研阶段 | 可以辅助完成的工作 | 常见交付结果 |
+| --- | --- | --- |
+| 研究方向与选题 | 校准中英文术语、拆分研究问题、判断综述类型、分析研究热点和空白、比较候选选题 | 研究问题、范围说明、候选选题、检索词、综述研究方案 |
+| 文献检索与整理 | 设计 PubMed、Web of Science 等数据库检索式，整理导出记录，去重、筛选、分类并规划 Zotero 文献库 | 检索式、检索记录、文献总表、筛选表、分类结果、RIS/BibTeX |
+| 文献获取与精读 | 检查 PDF 获取情况，按主题和重要程度安排阅读，定位论文页码、图表和关键结论，形成可直接用于写作的笔记 | 阅读计划、精读笔记、综述素材卡、缺失全文清单、文献比较表 |
+| 框架与图表 | 学习高质量综述的组织方式，设计文章主线、章节顺序、段落任务以及图片和表格安排 | 综述框架、章节目录、段落计划、图表规划、正文引用位置 |
+| 科学写作 | 根据框架和文献材料起草引言、主体章节、讨论、局限性、未来展望和结论，继续已有章节或整合全文 | 章节初稿、完整科学稿、章节衔接检查、待补内容清单 |
+| 中文与英文 | 把中文科学稿改得清楚、自然、专业；生成忠实英文稿和自然学术英文稿；检查中英文是否表达同一层意思 | 中文自然稿、英文忠实稿、英文自然稿、语言修改记录 |
+| 全文检查 | 检查结构、论证、数字、单位、术语、公式、引用、图表、重复内容和前后矛盾 | 全文审查报告、问题清单、修改建议、修订稿 |
+| 期刊与投稿准备 | 比较候选期刊，读取最新作者指南，学习目标期刊近期综述，整理 Cover Letter、图片权限和投稿文件 | 期刊比较表、期刊写作要求、投稿材料清单、Cover Letter 草稿 |
+| 编辑与审稿意见 | 拆分编辑和审稿人的每条意见，规划修改，更新稿件并起草逐条回复 | 意见解析表、返修计划、修改位置表、Response to Reviewers 草稿 |
 
-- **聊天结束，研究资产还在。** 项目状态、来源、主张、证据、决定、质量门和交接记录都写入可读文件，不依赖某一次对话的记忆。
-- **已有项目不用推倒重来。** 系统按意图和现有资产进入合适的工作单元，可以从选题、文献、草稿、润色、返修等任意阶段继续。
-- **引用不是装饰。** 关键主张需要关联具体来源和页码、章节、图表或行号；数字还要保留单位、条件、样本和比较边界。
-- **证据不够时会停。** 缺全文、论文互相冲突、实验条件不可比、结论需要专家判断时，系统会记录不确定性并生成明确的人工核验问题。
-- **润色不能偷偷改科学含义。** 中文“说人话”、英文忠实稿、英文自然稿和双语回查分开处理，数字、公式、引用、术语、否定、条件和结论强度都受保护。
-- **系统只承认做过的检查。** 没有执行的外部检索、期刊核验或文件检查记为 `NOT_CHECKED`，不会因为文字写得像完成了就变成 `PASS`。
+## 什么时候接入都可以
 
-### 主要特性
+这套系统不要求所有项目从第一步开始。你手里有什么，就从什么位置进入。
 
-#### 1. 从任意阶段接入
+| 你现在有什么 | 可以怎么开始 | 系统接下来会做什么 |
+| --- | --- | --- |
+| 只有一个研究方向 | 提供研究方向、关键词和大致目标 | 帮你缩小范围、校准术语、形成候选选题和检索方案 |
+| 已经有检索式或题录文件 | 放入检索式、RIS、BibTeX、CSV 或数据库导出文件 | 检查检索范围，合并去重，筛选分类并分析研究主题 |
+| 已经有 Zotero 文献库或 PDF | 指定 Zotero 集合或本地 PDF 文件夹 | 检查材料完整性，安排精读，生成阅读笔记和写作素材 |
+| 已经有精读笔记 | 把笔记和文献目录交给系统 | 综合不同论文，确定文章主线、章节框架和图表需求 |
+| 已经有目录或部分章节 | 提供当前版本和希望继续的部分 | 检查上下文，继续写下一节、重组章节或补缺失内容 |
+| 已经有完整中文稿 | 直接指定全文检查、中文自然化或英文写作 | 先诊断全文，再按需要输出修订稿和双语稿 |
+| 已经确定目标期刊 | 提供期刊名称和当前稿件 | 核查官方要求，分析期刊风格并准备适配清单 |
+| 已经收到编辑或审稿意见 | 提供决定信、意见原文和对应稿件 | 逐条建立修改计划、更新稿件并准备回复 |
 
-运行时会扫描当前项目状态、基线文件、活动产物和交接记录，再选择合适的工作单元。完整项目可以使用 `pipeline`，已有材料可以从 `checkpoint`、`revision`、`translation`、`audit_only` 或 `submission` 模式进入。
+中途接入时，系统会先给出一张简短的项目状态表：现有文件有哪些、哪些材料可以继续使用、目前缺什么、建议先做哪项工作、这次会生成哪些文件。确认后才开始执行。
 
-#### 2. 先定综述方法，再扩展检索
+## 操作方式很简单
 
-系统区分 narrative、systematic、scoping、critical、methodological、meta-analysis 和 meta-synthesis。研究问题、纳入排除标准、数据库、时间范围、筛选方式、质量评价和综合方法会进入版本化研究协议，避免“参考文献很多，所以就是系统综述”这种常见误判。
-
-#### 3. 主张和证据单独管理
-
-科学正文不会只存在于段落里。系统把重要内容拆成可追溯记录：
-
-```text
-claim -> 类型、强度、范围、原句 -> evidence[]
-evidence -> 来源、页码/图表、条件、数值、支持或冲突关系
-```
-
-这样可以双向检查：正文里的高风险判断是否有证据，已经整理的关键证据是否被正确使用。
-
-#### 4. 跨文献综合，而不是逐篇复述
-
-系统要求先建立共同的比较维度，再说明每类方法解决了什么问题、增加了什么代价、为什么不同研究会得出不同结果，以及这些差异能否支持研究空白。定量比较还会检查实验对象、输入输出、测量条件、指标定义、数据划分、真值、混杂因素和数据泄漏风险。
-
-#### 5. 不确定性是正式状态
-
-每个重要判断可以标记为 `verified`、`supported`、`uncertain` 或 `human_review_required`。需要导师、同门或领域专家判断时，系统会记录原文、已有证据、冲突、影响范围和恢复计划，不用一句含糊的“请确认”把问题推回给作者。
-
-#### 6. 中文、英文和科学底稿分层
-
-语言处理遵循下面的顺序：
+安装后，在 Codex 中打开你的科研项目文件夹，然后直接说明任务：
 
 ```text
-科学清晰化
--> 科学审计
--> 中文自然化
--> 英文忠实稿
--> 英文自然化
--> 中英文回查
--> 残留风格与引用检查
+使用 $sci-review-system 读取这个项目，判断我现在做到哪一步，
+告诉我还缺什么，并从合适的位置继续完成这篇 SCI 综述。
 ```
 
-中文稿可以去掉模板腔、翻译腔、机械过渡和空泛收尾；英文稿会处理语法、句序、名词化、被动堆叠和不自然连接。任何语言改动都不能把 `may` 写成 `proves`，也不能把相关关系改成因果关系。
+也可以直接指定当前需求：
 
-#### 7. 来源和工具能力先核验
+```text
+使用 $sci-review-system 帮我从这个研究方向开始确定综述选题。
+使用 $sci-review-system 整理这个 RIS 文献库并建立分类。
+使用 $sci-review-system 精读这篇论文并生成综述写作素材。
+使用 $sci-review-system 根据现有笔记搭建文章框架。
+使用 $sci-review-system 继续写第三章。
+使用 $sci-review-system 把这份中文稿写成自然的学术英文。
+使用 $sci-review-system 处理这封编辑决定信和审稿意见。
+```
 
-需要联网、数据库、PDF、DOCX、Zotero 或其他外部能力时，系统先运行 capability preflight。每次外部查找都会记录问题、实际查询、访问路径、时间、返回来源和结果。搜索摘要和 AI 总结只能用于发现线索，不能替代原始来源。
+你不用先理解 28 个工作单元，也不用记住每一步的名字。系统负责判断路线，在需要确定选题、范围、期刊或重要科学结论时再请你选择。
 
-#### 8. 期刊和投稿包按需启用
+## 它怎样发挥人工智能的能力
 
-期刊状态分为 `not_selected`、`candidate` 和 `confirmed`。没有目标期刊时，项目可以继续写作和审计；确认期刊后，只有最新的官方作者指南和投稿系统信息才能成为硬约束。投稿包由用户给出的模板、清单或明确要求决定，系统不会擅自规定一套“所有期刊都适用”的文件列表。
+普通提示词通常只让模型完成一次回答。SCI Review System 把同一个科研项目持续交给 AI 协作，并让模型在不同阶段承担不同工作：
 
-#### 9. 区分模拟审稿和真实编辑反馈
+- 作为研究助理，帮助明确问题、设计检索和发现值得继续研究的方向；
+- 作为文献管理员，整理题录、分类文献、检查全文和安排阅读；
+- 作为阅读助手，从论文中提取方法、结果、限制、图表和可用于写作的材料；
+- 作为结构编辑，把分散材料组织成一条清楚的综述主线；
+- 作为科学写作者，依据现有文献和框架起草、续写和整合正文；
+- 作为中英文编辑，在不改变专业内容的前提下改善表达；
+- 作为审查者，检查全文中的结构问题、数字问题、引用问题和前后矛盾；
+- 作为返修助理，把编辑意见、稿件修改和回复内容一一对应起来。
 
-预投稿审查可以用于找漏洞，但不会冒充期刊编辑意见。进入正式返修流程前，必须登记真实的决定信或投稿系统消息，保留文件哈希和锚点，并逐条映射编辑、审稿人、稿件修改和重新审计结果。AI 可以起草回复，作者负责确认和发送。
+可以独立进行的工作允许并行处理，最后由主代理统一整合。浏览器、学术数据库、PDF、DOCX、Zotero 等工具可用时，系统会调用相应能力；某个工具暂时不可用时，会说明替代方法，不会让整个项目因为缺少一个插件而停摆。
 
-#### 10. 可执行的质量门
+这套设计保留了大模型擅长的理解、比较、归纳、写作和语言处理能力，同时用项目文件保存长期进度。换一次对话、暂停几天或更换执行阶段，前面的工作仍然可以继续使用。
 
-第一版包含：
+## 最后可以拿到什么
 
-- 28 个语义工作单元；
-- 17 份 JSON Schema；
-- 14 项合同与鲁棒性评测；
-- 来源、查找、能力、人工决定、文件哈希和交接记录；
-- 数字与单位、引用、protected spans、产物结构和不确定性检查脚本。
+交付内容会随接入阶段和任务变化，通常包括：
 
-工作单元只有在必需产物和质量门都满足时才能完成。文件在检查后被修改，原来的通过状态会失效；未完成的单元也不能直接跳到不允许的后续阶段。
+- 项目状态、当前进度和下一步工作计划；
+- 研究问题、候选选题、综述范围和检索方案；
+- 文献检索记录、题录库、筛选结果和分类表；
+- 精读笔记、综述素材卡、文献比较表和研究空白分析；
+- 文章框架、章节目录、段落计划和图表安排；
+- 各章节初稿、完整科学稿和全文修改稿；
+- 中文自然稿、英文忠实稿、英文自然稿和双语检查结果；
+- 数字、引用、术语、图表和全文一致性检查报告；
+- 目标期刊分析、作者指南摘要、投稿材料清单和 Cover Letter 草稿；
+- 审稿意见解析、返修计划、修改说明和逐条回复草稿。
 
-### 适合谁用
+这些结果会保存为适合科研人员继续查看和修改的 Markdown、CSV、JSON，以及任务需要且当前工具支持的 Word、PDF 或图片文件。你可以人工修改，也可以在下一次对话中继续交给系统处理。
 
-- 正在准备综述、学位论文相关工作或研究计划的研究生；
-- 需要整理大量跨方法、跨实验条件文献的研究人员；
-- 已经有草稿，但引用、数字、结构和语言版本逐渐失控的项目；
-- 需要把中文科学稿转成自然英文，同时保留科学含义的作者；
-- 收到编辑或审稿意见，需要建立“意见—修改—证据—回复”对应关系的团队。
+## 它和一条普通提示词的区别
 
-核心规则不绑定具体学科。仓库额外提供柔性曲面超声检测项目档案，用来约束该领域的物理层次、方法比较条件和常见错误等价关系。
+| 普通提示词 | SCI Review System |
+| --- | --- |
+| 完成一次回答后，上下文容易丢失 | 保存项目状态和正式交付文件，可以暂停和恢复 |
+| 需要用户自己判断下一步该问什么 | 先识别项目阶段，再推荐下一项工作 |
+| 容易把选题、阅读、写作和润色混在一次对话里 | 不同科研任务分开执行，结果可以逐项检查 |
+| 输出通常只是一段聊天文本 | 输出可继续使用的笔记、表格、稿件和检查报告 |
+| 很难接手已经做到一半的项目 | 可以从文献、笔记、框架、草稿或返修阶段直接进入 |
+| 主要依赖模型当下的回答 | 同时使用模型能力、运行状态、项目文件和确定性检查 |
 
-### 安装为 Codex Skill
+## 专业边界
+
+系统不会替作者编造论文、DOI、数据、实验结果、作者信息或期刊要求。需要导师、同门或领域专家判断的问题会明确列出。账号登录、付费、版权确认和最终投稿仍由用户本人完成。
+
+当前是第一个公开版本。它的目标是提供一套可以实际使用、可以继续扩展的科研协作方法，不把“投稿准备”宣传成“保证录用”。
+
+## 安装
 
 建议使用 Python 3.10 或更高版本。
 
@@ -120,47 +147,29 @@ git clone https://github.com/fishcold789/sci-review-system.git ~/.codex/skills/s
 python -m pip install -r ~/.codex/skills/sci-review-system/requirements.txt
 ```
 
-安装后重新加载 Codex。可以按自然语言触发，也可以明确指定：
+安装后重新加载 Codex，然后直接按研究任务调用 `$sci-review-system`。
 
-```text
-Use $sci-review-system to recover this review project and continue from the
-appropriate checkpoint.
-```
+## Runtime 与验证
 
-### Runtime 快速开始
-
-请在单独的科研项目目录中初始化状态，不要把运行状态写进 skill 仓库：
+需要直接使用运行时工具时，请在单独的科研项目目录中初始化状态，不要把运行结果写入 Skill 仓库：
 
 ```powershell
 python scripts/sci_review_runtime.py init ..\my-review `
   --project-id my-review `
   --title "My SCI Review" `
-  --intent "Recover the project and define the next evidence-backed work unit"
+  --intent "Recover the project and continue from the appropriate checkpoint"
 ```
-
-查看项目状态：
 
 ```powershell
 python scripts/sci_review_runtime.py inspect ..\my-review
-```
-
-查看全部命令：
-
-```powershell
 python scripts/sci_review_runtime.py --help
-```
-
-### 验证
-
-运行仓库自带的合同与鲁棒性检查：
-
-```powershell
 python evals/run_evals.py
 ```
 
-当前评测覆盖工作单元转换、产物合同、来源和查找义务、质量门证据、人工决定、哈希完整性、不确定性恢复、可选期刊、用户控制的投稿包和真实编辑来源要求。
+<details>
+<summary>实现结构</summary>
 
-### 仓库结构
+当前仓库包含 28 个语义工作单元、17 份 JSON Schema 和 14 项合同与鲁棒性评测。
 
 ```text
 SKILL.md             Codex 执行规则和路由入口
@@ -176,95 +185,58 @@ scripts/             运行时和确定性检查脚本
 work-units/          语义工作单元注册表
 ```
 
-完整执行合同见 [SKILL.md](SKILL.md)。
+</details>
+
+完整执行规则见 [SKILL.md](SKILL.md)。
 
 ## English
 
-SCI Review System is an evidence-grounded Codex skill and executable runtime
-for planning, building, revising, and auditing scientific review manuscripts.
-It turns research conversations into a recoverable workspace with explicit
-artifacts, sources, decisions, uncertainty states, quality gates, and handoffs.
+SCI Review System is a Codex skill and executable runtime for supporting the
+full lifecycle of a scientific review: topic definition, literature search,
+screening, reading, synthesis, outlining, drafting, language revision, journal
+preparation, and reviewer response.
 
-The system supports both new and existing projects. It can start from a rough
-topic, a curated corpus, reading notes, a manuscript draft, or an actual editor
-decision. Instead of forcing every project through a numbered tutorial, it
-routes the current intent and available assets to one of 28 semantic work units.
+You can start with a rough research direction or enter with an existing corpus,
+Zotero library, PDF collection, reading notes, outline, manuscript draft, target
+journal, or editorial decision. The system inspects the available materials,
+identifies the current project stage, and continues from the appropriate
+checkpoint. Users do not need to restart a project or remember a numbered
+workflow.
 
-This first public version is more than a prompt collection. It includes a state
-runtime, source and lookup records, 17 JSON Schemas, hash-bound artifacts,
-human checkpoints, controlled transitions, and 14 contract and robustness
-checks. Researchers can inspect what was used, what changed, what remains
-uncertain, and what must happen next without relying on chat history.
+### Research Work It Can Support
 
-> SCI Review System is human-led. It can accelerate research organization,
-> comparison, drafting, language revision, and verification, but it does not
-> replace scientific judgment or promise acceptance, submission success, or
-> any journal outcome.
+- refine research questions, terminology, scope, and review design;
+- build and document database search strategies;
+- merge, deduplicate, screen, classify, and organize literature records;
+- plan lawful full-text acquisition and structured paper reading;
+- produce reading notes, review material cards, and study comparison tables;
+- design the manuscript argument, section structure, paragraph tasks, figures,
+  and tables;
+- draft or continue introductions, body sections, discussions, limitations,
+  perspectives, and conclusions;
+- revise scientific Chinese and produce faithful and natural academic English;
+- audit manuscript structure, numbers, units, citations, terminology, figures,
+  and internal consistency;
+- compare candidate journals, summarize verified author requirements, and
+  prepare submission materials;
+- map editor and reviewer comments to manuscript changes and draft responses.
 
-### What It Handles
+### Enter At Any Stage
 
-- review protocol selection and eligibility design;
-- research-question refinement and reproducible source records;
-- lawful, anchored reading at page, section, figure, table, or line level;
-- claim-evidence ledgers with conditions, conflicts, and uncertainty;
-- cross-literature synthesis and bounded quantitative comparison;
-- argument blueprints, paragraph contracts, and evidence-backed drafting;
-- science, citation, terminology, formula, figure, rights, and number audits;
-- plain scientific Chinese, faithful English, natural academic English, and
-  bilingual meaning-preservation checks;
-- optional journal adaptation and user-directed submission packaging;
-- separate workflows for simulated review and real editor/reviewer feedback.
+Use the system with only a research direction, or provide any reusable project
+asset: RIS/BibTeX/CSV exports, Zotero collections, PDFs, reading notes, outlines,
+draft chapters, full manuscripts, journal instructions, or decision letters.
+The first response summarizes the current stage, reusable files, missing inputs,
+recommended next task, and expected deliverables.
 
-### Design Highlights
-
-#### Enter At The Right Checkpoint
-
-Use `pipeline` for a complete project, or enter through `checkpoint`,
-`revision`, `translation`, `audit_only`, or `submission` when reusable assets
-already exist. The runtime inspects state and prerequisites before starting a
-work unit.
-
-#### Evidence Before Claims
-
-Important statements are represented as traceable claim-evidence records:
+Invoke it directly in Codex:
 
 ```text
-claim -> type, strength, scope, exact sentence -> evidence[]
-evidence -> source, page/figure/table, conditions, values, relation
+Use $sci-review-system to inspect this research project, determine its current
+stage, and continue the SCI review from the appropriate checkpoint.
 ```
 
-The system checks both directions: high-risk prose must point to evidence, and
-high-risk evidence must show where it is used or why it remains unused.
-
-#### Uncertainty Can Stop A Claim
-
-Claims may be `verified`, `supported`, `uncertain`, or
-`human_review_required`. Missing sources, incompatible experiments, ambiguous
-mechanisms, conflicting papers, and expert-only decisions produce structured
-uncertainty records and focused human checkpoints instead of polished guesses.
-
-#### Language Revision Cannot Rewrite The Science
-
-Chinese humanization, faithful English drafting, English naturalization, and
-bilingual back-checking are separate passes. Numbers, units, equations,
-citations, terms, attribution, negation, conditions, and claim strength remain
-protected. A fluent translation that drops a limitation still fails.
-
-#### External Checks Must Actually Run
-
-Capability preflight and lookup records distinguish `PASS`, `FAIL`, and
-`NOT_CHECKED`. Search snippets and model summaries are discovery aids, not
-final evidence. Journal-specific rules become enforceable only after the user
-confirms a venue and current official sources are registered.
-
-#### Real Editorial Feedback Has Its Own Workflow
-
-Pre-submission critique remains separate from actual editor correspondence.
-Formal revision work requires the received decision letter or portal message,
-a frozen manuscript baseline, atomic comment mapping, evidence-linked changes,
-re-audits, and human approval before any response is ready to send.
-
-### Install As A Codex Skill
+### Install
 
 Python 3.10 or later is recommended.
 
@@ -282,64 +254,27 @@ git clone https://github.com/fishcold789/sci-review-system.git ~/.codex/skills/s
 python -m pip install -r ~/.codex/skills/sci-review-system/requirements.txt
 ```
 
-Reload Codex, then invoke the skill by intent or explicitly:
+Reload Codex and invoke `$sci-review-system` by research intent.
 
-```text
-Use $sci-review-system to recover this review project and continue from the
-appropriate checkpoint.
-```
+### Runtime And Validation
 
-### Runtime Quick Start
-
-Initialize state in a named research project directory, not in this skill
-repository:
+Initialize runtime state in a separate research project directory:
 
 ```powershell
 python scripts/sci_review_runtime.py init ..\my-review `
   --project-id my-review `
   --title "My SCI Review" `
-  --intent "Recover the project and define the next evidence-backed work unit"
+  --intent "Recover the project and continue from the appropriate checkpoint"
 ```
-
-Inspect the resulting state:
 
 ```powershell
 python scripts/sci_review_runtime.py inspect ..\my-review
-```
-
-List all runtime commands:
-
-```powershell
 python scripts/sci_review_runtime.py --help
-```
-
-### Validation
-
-Run the bundled contract and robustness checks:
-
-```powershell
 python evals/run_evals.py
 ```
 
-The current suite covers semantic work-unit transitions, artifact contracts,
-source and lookup obligations, gate evidence, human decisions, hash integrity,
-uncertainty recovery, optional journal handling, user-directed package plans,
-and real editorial source requirements.
+SCI Review System is human-led. It can extend the amount and range of research
+work that AI can assist with, but it does not replace scientific judgment or
+promise acceptance, submission success, or any journal outcome.
 
-### Repository Layout
-
-```text
-SKILL.md             Codex execution instructions and routing policy
-agents/              Codex interface metadata
-assets/templates/    Chinese and English editorial correspondence templates
-evals/               Contract and robustness checks
-hooks/               Optional read-only runtime hooks
-orchestration/       Intent routing rules
-project-profiles/    Optional domain-specific scientific constraints
-references/          On-demand policies and writing references
-schemas/             JSON Schema contracts
-scripts/             Runtime and deterministic checks
-work-units/          Semantic work-unit registry
-```
-
-See [SKILL.md](SKILL.md) for the complete operating contract.
+See [SKILL.md](SKILL.md) for the complete operating rules.
