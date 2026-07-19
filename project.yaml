@@ -1,0 +1,9 @@
+name: SCI Review System
+authors: [HP]
+category: Agent
+tags: [SCI review, scientific writing, literature review, evidence audit, Codex skill]
+status: in-progress
+updated: "2026-07-19"
+summary: 面向 SCI 综述研究与写作的证据驱动、可审计、可从任意阶段接入的 Codex 技能系统。
+collection: Academic Research
+readme: README.md

@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/editorial-decision.schema.json",
+  "title": "Actual Editorial Decision Intake",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision_id",
+    "input_state",
+    "source",
+    "journal",
+    "manuscript",
+    "decision",
+    "comment_index",
+    "revision_context",
+    "response_controls",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "decision_id": { "type": "string", "pattern": "^ED-[0-9]{3,}$" },
+    "input_state": { "enum": ["missing", "unverified", "actual_received"] },
+    "source": { "$ref": "#/$defs/source" },
+    "journal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": ["string", "null"], "minLength": 1 },
+        "publisher": { "type": ["string", "null"] },
+        "submission_system": { "type": ["string", "null"] }
+      }
+    },
+    "manuscript": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "manuscript_id"],
+      "properties": {
+        "title": { "type": ["string", "null"], "minLength": 1 },
+        "manuscript_id": { "type": ["string", "null"] },
+        "corresponding_author": { "type": ["string", "null"] }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "verbatim_label", "source_anchor", "response_deadline"],
+      "properties": {
+        "category": {
+          "enum": [
+            "unknown",
+            "administrative_query",
+            "minor_revision",
+            "major_revision",
+            "reject_and_resubmit",
+            "reject",
+            "accept",
+            "transfer_invited",
+            "withdrawal_acknowledged",
+            "other"
+          ]
+        },
+        "verbatim_label": { "type": ["string", "null"], "minLength": 1 },
+        "source_anchor": { "type": ["string", "null"], "minLength": 1 },
+        "response_deadline": { "type": ["string", "null"], "format": "date-time" },
+        "conditions_or_notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "comment_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["editor_comment_ids", "reviewer_blocks"],
+      "properties": {
+        "editor_comment_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^EC-[0-9]{3,}$" }
+        },
+        "reviewer_blocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reviewer_label", "comment_ids"],
+            "properties": {
+              "reviewer_label": { "type": "string", "minLength": 1 },
+              "comment_ids": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "type": "string", "pattern": "^RC-[0-9]{3,}$" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "revision_context": { "$ref": "#/$defs/revision_context" },
+    "response_controls": { "$ref": "#/$defs/response_controls" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "artifact_path",
+        "artifact_sha256",
+        "content_anchor",
+        "received_at",
+        "original_language",
+        "sender_role",
+        "authenticity_check"
+      ],
+      "properties": {
+        "source_type": {
+          "enum": ["email", "decision_letter", "submission_portal_export", "other"]
+        },
+        "artifact_path": { "type": ["string", "null"] },
+        "artifact_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "content_anchor": { "type": ["string", "null"] },
+        "received_at": { "type": ["string", "null"], "format": "date-time" },
+        "original_language": { "type": ["string", "null"], "minLength": 2 },
+        "sender_role": {
+          "type": ["string", "null"],
+          "enum": ["editor", "editorial_office", "submission_system", "publisher", "other", null]
+        },
+        "authenticity_check": { "enum": ["pending", "human_confirmed", "rejected"] }
+      }
+    },
+    "revision_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_artifact", "baseline_version", "baseline_sha256", "revised_manuscript_status", "revised_artifact", "revised_sha256"],
+      "properties": {
+        "baseline_artifact": { "type": ["string", "null"] },
+        "baseline_version": { "type": ["string", "null"] },
+        "baseline_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "revised_manuscript_status": {
+          "enum": ["missing", "planned", "in_progress", "candidate", "frozen"]
+        },
+        "revised_artifact": { "type": ["string", "null"] },
+        "revised_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "revised_manuscript_status": { "enum": ["candidate", "frozen"] }
+            },
+            "required": ["revised_manuscript_status"]
+          },
+          "then": {
+            "properties": {
+              "revised_artifact": { "type": "string", "minLength": 1 },
+              "revised_sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+            }
+          }
+        }
+      ]
+    },
+    "response_controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["working_mode", "formal_response_eligibility", "block_reasons", "human_send_authorization"],
+      "properties": {
+        "working_mode": { "enum": ["strategy_only", "draft_not_sendable", "draft_formal_response"] },
+        "formal_response_eligibility": { "enum": ["blocked", "eligible"] },
+        "block_reasons": { "type": "array", "items": { "type": "string" } },
+        "human_send_authorization": {
+          "enum": ["not_requested", "pending", "approved", "rejected"]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "input_state": { "const": "missing" } },
+        "required": ["input_state"]
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "properties": {
+              "artifact_path": { "type": "null" },
+              "artifact_sha256": { "type": "null" },
+              "content_anchor": { "type": "null" },
+              "received_at": { "type": "null" },
+              "original_language": { "type": "null" },
+              "sender_role": { "type": "null" },
+              "authenticity_check": { "const": "pending" }
+            }
+          },
+          "decision": {
+            "properties": {
+              "category": { "const": "unknown" },
+              "verbatim_label": { "type": "null" },
+              "source_anchor": { "type": "null" },
+              "response_deadline": { "type": "null" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "input_state": { "const": "unverified" } },
+        "required": ["input_state"]
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "properties": { "authenticity_check": { "const": "pending" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "input_state": { "const": "actual_received" } },
+        "required": ["input_state"]
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "properties": {
+              "artifact_path": { "type": "string", "minLength": 1 },
+              "artifact_sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+              "content_anchor": { "type": "string", "minLength": 1 },
+              "received_at": { "type": "string", "format": "date-time" },
+              "original_language": { "type": "string", "minLength": 2 },
+              "sender_role": { "enum": ["editor", "editorial_office", "submission_system", "publisher", "other"] }
+            }
+          },
+          "journal": {
+            "properties": { "name": { "type": "string", "minLength": 1 } }
+          },
+          "manuscript": {
+            "properties": { "title": { "type": "string", "minLength": 1 } }
+          },
+          "decision": {
+            "properties": {
+              "category": {
+                "enum": [
+                  "administrative_query",
+                  "minor_revision",
+                  "major_revision",
+                  "reject_and_resubmit",
+                  "reject",
+                  "accept",
+                  "transfer_invited",
+                  "withdrawal_acknowledged",
+                  "other"
+                ]
+              },
+              "verbatim_label": { "type": "string", "minLength": 1 },
+              "source_anchor": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "input_state": { "enum": ["missing", "unverified"] } },
+        "required": ["input_state"]
+      },
+      "then": {
+        "properties": {
+          "response_controls": {
+            "properties": {
+              "working_mode": { "const": "strategy_only" },
+              "formal_response_eligibility": { "const": "blocked" },
+              "human_send_authorization": { "enum": ["not_requested", "rejected"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "properties": { "authenticity_check": { "enum": ["pending", "rejected"] } },
+            "required": ["authenticity_check"]
+          }
+        },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "response_controls": {
+            "properties": {
+              "working_mode": { "const": "strategy_only" },
+              "formal_response_eligibility": { "const": "blocked" },
+              "human_send_authorization": { "enum": ["not_requested", "rejected"] }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "revision_context": {
+            "properties": { "revised_manuscript_status": { "enum": ["missing", "planned"] } },
+            "required": ["revised_manuscript_status"]
+          }
+        },
+        "required": ["revision_context"]
+      },
+      "then": {
+        "properties": {
+          "response_controls": {
+            "properties": {
+              "working_mode": { "const": "strategy_only" },
+              "formal_response_eligibility": { "const": "blocked" },
+              "human_send_authorization": { "const": "not_requested" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "revision_context": {
+            "properties": { "revised_manuscript_status": { "const": "in_progress" } },
+            "required": ["revised_manuscript_status"]
+          }
+        },
+        "required": ["revision_context"]
+      },
+      "then": {
+        "properties": {
+          "response_controls": {
+            "properties": {
+              "working_mode": { "enum": ["strategy_only", "draft_not_sendable"] },
+              "formal_response_eligibility": { "const": "blocked" },
+              "human_send_authorization": { "const": "not_requested" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "response_controls": {
+            "properties": { "formal_response_eligibility": { "const": "eligible" } },
+            "required": ["formal_response_eligibility"]
+          }
+        },
+        "required": ["response_controls"]
+      },
+      "then": {
+        "properties": {
+          "input_state": { "const": "actual_received" },
+          "source": {
+            "properties": {
+              "artifact_path": { "type": "string", "minLength": 1 },
+              "artifact_sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+              "content_anchor": { "type": "string", "minLength": 1 },
+              "received_at": { "type": "string", "format": "date-time" },
+              "original_language": { "type": "string", "minLength": 2 },
+              "sender_role": { "enum": ["editor", "editorial_office", "submission_system", "publisher", "other"] },
+              "authenticity_check": { "const": "human_confirmed" }
+            }
+          },
+          "journal": {
+            "properties": { "name": { "type": "string", "minLength": 1 } }
+          },
+          "manuscript": {
+            "properties": { "title": { "type": "string", "minLength": 1 } }
+          },
+          "revision_context": {
+            "properties": {
+              "baseline_artifact": { "type": "string", "minLength": 1 },
+              "baseline_version": { "type": "string", "minLength": 1 },
+              "baseline_sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" },
+              "revised_manuscript_status": { "enum": ["candidate", "frozen"] },
+              "revised_artifact": { "type": "string", "minLength": 1 },
+              "revised_sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+            }
+          },
+          "response_controls": {
+            "properties": {
+              "working_mode": { "const": "draft_formal_response" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "response_controls": {
+            "properties": { "human_send_authorization": { "const": "approved" } },
+            "required": ["human_send_authorization"]
+          }
+        },
+        "required": ["response_controls"]
+      },
+      "then": {
+        "properties": {
+          "response_controls": {
+            "properties": {
+              "formal_response_eligibility": { "const": "eligible" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

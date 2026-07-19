@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/work_unit_contract.schema.json",
+  "title": "SCI Review Work Unit Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "unit_id",
+    "title_zh",
+    "title_en",
+    "purpose",
+    "project_profile",
+    "triggers",
+    "inputs",
+    "reads",
+    "writes",
+    "outputs",
+    "gates",
+    "handoff",
+    "execution",
+    "human_decisions",
+    "forbidden_actions",
+    "failure_policy"
+  ],
+  "properties": {
+    "unit_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "title_zh": { "type": "string", "minLength": 1 },
+    "title_en": { "type": "string", "minLength": 1 },
+    "purpose": { "type": "string", "minLength": 1 },
+    "project_profile": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["profile_id", "profile_version", "path", "selection_reason"],
+          "properties": {
+            "profile_id": { "type": "string", "minLength": 1 },
+            "profile_version": { "type": "string", "minLength": 1 },
+            "path": { "type": "string", "minLength": 1 },
+            "selection_reason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "triggers": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "inputs": { "$ref": "#/$defs/inputs" },
+    "reads": { "type": "array", "items": { "type": "string" } },
+    "writes": { "type": "array", "items": { "type": "string" } },
+    "outputs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/output" } },
+    "gates": { "$ref": "#/$defs/gates" },
+    "handoff": { "$ref": "#/$defs/handoff" },
+    "execution": { "$ref": "#/$defs/execution" },
+    "human_decisions": { "type": "array", "items": { "type": "string" } },
+    "forbidden_actions": { "type": "array", "items": { "type": "string" } },
+    "failure_policy": { "$ref": "#/$defs/failure_policy" }
+  },
+  "$defs": {
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "artifact_type", "required_fields", "min_count", "version_policy"],
+      "properties": {
+        "kind": { "type": "string" },
+        "artifact_type": { "type": "string" },
+        "required_fields": { "type": "array", "items": { "type": "string" } },
+        "min_count": { "type": "integer", "minimum": 0 },
+        "version_policy": { "enum": ["active", "frozen", "any", "latest_reviewed"] }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "optional"],
+      "properties": {
+        "required": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+        "optional": { "type": "array", "items": { "$ref": "#/$defs/input" } }
+      }
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "artifact_type", "format", "required_fields", "path_template"],
+      "properties": {
+        "kind": { "type": "string" },
+        "artifact_type": { "type": "string" },
+        "format": { "enum": ["md", "json", "jsonl", "csv", "svg", "png", "pdf", "docx"] },
+        "required_fields": { "type": "array", "items": { "type": "string" } },
+        "path_template": { "type": "string" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_id", "kind", "blocking"],
+      "properties": {
+        "gate_id": { "type": "string" },
+        "kind": { "enum": ["science", "language", "mechanics", "uncertainty", "rights_submission", "human"] },
+        "blocking": { "type": "boolean" }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "advisory"],
+      "properties": {
+        "required": { "type": "array", "items": { "$ref": "#/$defs/gate" } },
+        "advisory": { "type": "array", "items": { "$ref": "#/$defs/gate" } }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_next_units", "required_fields", "fallback_units"],
+      "properties": {
+        "default_next_units": { "type": "array", "items": { "type": "string" } },
+        "required_fields": { "type": "array", "items": { "type": "string" } },
+        "fallback_units": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner_role", "agent_roles", "strategy", "independent_outputs_required", "inline_fallback"],
+      "properties": {
+        "owner_role": { "type": "string" },
+        "agent_roles": { "type": "array", "items": { "type": "string" } },
+        "strategy": { "enum": ["serial", "parallel", "hybrid"] },
+        "parallel_group_id": { "type": ["string", "null"] },
+        "independent_outputs_required": { "type": "boolean" },
+        "model_hint": { "type": "string" },
+        "max_retries": { "type": "integer", "minimum": 0 },
+        "deterministic_checks": { "type": "boolean" },
+        "inline_fallback": { "type": "boolean" }
+      }
+    },
+    "failure_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["on_block", "on_warn", "max_retries", "allow_degrade"],
+      "properties": {
+        "on_block": { "enum": ["stop", "request_input", "fallback"] },
+        "on_warn": { "enum": ["continue", "request_input", "stop"] },
+        "max_retries": { "type": "integer", "minimum": 0 },
+        "allow_degrade": { "type": "boolean" }
+      }
+    }
+  }
+}

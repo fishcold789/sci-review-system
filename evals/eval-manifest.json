@@ -1,0 +1,19 @@
+{
+  "schema_version": "0.1",
+  "checks": [
+    {"id": "skill-frontmatter", "kind": "mechanics", "description": "SKILL.md has valid name and description frontmatter"},
+    {"id": "semantic-unit-registry", "kind": "mechanics", "description": "work-unit registry has unique semantic ids without numeric stage prefixes"},
+    {"id": "unit-transitions", "kind": "mechanics", "description": "standard, rework, and escalation transitions reference registered units"},
+    {"id": "unit-artifact-contracts", "kind": "mechanics", "description": "start and completion artifacts are producible and belong to their units"},
+    {"id": "generic-core", "kind": "science", "description": "field-specific rules are isolated in lazy project profiles"},
+    {"id": "conditional-reading-anchor", "kind": "science", "description": "reading-session anchors are enabled by repository policy rather than imposed globally"},
+    {"id": "no-numbered-router", "kind": "mechanics", "description": "new router does not require old numbered workflow entry"},
+    {"id": "language-protection", "kind": "language", "description": "language references protect numbers, formulas, citations and stance"},
+    {"id": "runtime-contracts", "kind": "mechanics", "description": "runtime exposes guarded commands for decisions, gates, completion, and handoff"},
+    {"id": "contract-registry", "kind": "mechanics", "description": "registry defines gate evidence, block transitions, prerequisites, outputs, and write scopes"},
+    {"id": "runtime-contract-smoke", "kind": "mechanics", "description": "bypass attempts fail and valid BLOCK-to-PASS recovery succeeds in an isolated res directory"},
+    {"id": "robustness-contract-smoke", "kind": "mechanics", "description": "capability, lookup, optional-journal, template-package, editor-letter, and freshness contracts pass positive and negative runtime paths"},
+    {"id": "uncertainty-escalation", "kind": "science", "description": "uncertain claims create a human checkpoint instead of being silently completed"},
+    {"id": "review-protocol", "kind": "science", "description": "review type and eligibility are recorded before broad retrieval"}
+  ]
+}

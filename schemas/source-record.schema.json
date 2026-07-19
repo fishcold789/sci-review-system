@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/source-record.schema.json",
+  "title": "External Source Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "title",
+    "source_type",
+    "locator",
+    "authority_level",
+    "review_status",
+    "publication_date",
+    "accessed_at",
+    "freshness",
+    "record_check",
+    "permitted_uses",
+    "provenance"
+  ],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "pattern": "^SRC-[0-9]{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_type": {
+      "enum": [
+        "journal_article",
+        "preprint",
+        "dataset",
+        "standard",
+        "official_guidance",
+        "submission_portal",
+        "registry_record",
+        "bibliographic_record",
+        "search_result",
+        "citation_context",
+        "book_or_handbook",
+        "user_file",
+        "personal_communication",
+        "other"
+      ]
+    },
+    "locator": {
+      "$ref": "#/$defs/locator"
+    },
+    "authority_level": {
+      "enum": [
+        "A_OFFICIAL_PRIMARY",
+        "A_SCHOLARLY_PRIMARY",
+        "B_SCHOLARLY_SYNTHESIS",
+        "B_TRUSTED_METADATA",
+        "C_DISCOVERY_ONLY",
+        "U_UNVERIFIED"
+      ]
+    },
+    "review_status": {
+      "enum": [
+        "official",
+        "peer_reviewed",
+        "editorially_reviewed",
+        "preprint",
+        "not_applicable",
+        "unknown"
+      ]
+    },
+    "publication_date": {
+      "type": ["string", "null"],
+      "format": "date"
+    },
+    "accessed_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "version_or_revision": {
+      "type": ["string", "null"]
+    },
+    "freshness": {
+      "$ref": "#/$defs/freshness"
+    },
+    "record_check": {
+      "$ref": "#/$defs/check_result"
+    },
+    "permitted_uses": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "discovery",
+          "bibliographic_metadata",
+          "scientific_claim",
+          "numeric_claim",
+          "field_synthesis",
+          "journal_requirement",
+          "submission_requirement",
+          "citation_context",
+          "provenance_only"
+        ]
+      }
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "locator": {
+            "properties": {
+              "kind": {
+                "enum": ["url", "doi", "database_id", "api_endpoint"]
+              }
+            },
+            "required": ["kind"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "accessed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "authority_level": {
+            "enum": ["C_DISCOVERY_ONLY", "U_UNVERIFIED"]
+          }
+        },
+        "required": ["authority_level"]
+      },
+      "then": {
+        "properties": {
+          "permitted_uses": {
+            "not": {
+              "contains": {
+                "enum": [
+                  "scientific_claim",
+                  "numeric_claim",
+                  "field_synthesis",
+                  "journal_requirement",
+                  "submission_requirement"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "url",
+            "doi",
+            "database_id",
+            "api_endpoint",
+            "local_path",
+            "bibliographic_citation",
+            "communication_id",
+            "other"
+          ]
+        },
+        "value": { "type": "string", "minLength": 1 },
+        "anchor": { "type": ["string", "null"] }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "max_age_days",
+        "checked_at",
+        "expires_at",
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "class": {
+          "enum": ["volatile", "current", "stable", "historical"]
+        },
+        "max_age_days": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "checked_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "status": { "enum": ["PASS", "FAIL", "NOT_CHECKED"] },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "class": { "enum": ["volatile", "current"] }
+            },
+            "required": ["class"]
+          },
+          "then": {
+            "properties": {
+              "max_age_days": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "PASS" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "checked_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      ]
+    },
+    "check_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checked_at", "method", "evidence_refs", "reason"],
+      "properties": {
+        "status": { "enum": ["PASS", "FAIL", "NOT_CHECKED"] },
+        "checked_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "method": { "type": ["string", "null"] },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "PASS" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "checked_at": { "type": "string", "format": "date-time" },
+              "method": { "type": "string", "minLength": 1 },
+              "evidence_refs": { "minItems": 1 }
+            }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "acquisition_method",
+        "lookup_id",
+        "capability_id",
+        "observed_at",
+        "trace_ref"
+      ],
+      "properties": {
+        "acquisition_method": {
+          "enum": [
+            "browser",
+            "api",
+            "academic_database",
+            "pdf_reader",
+            "reference_manager",
+            "user_assisted",
+            "local_file",
+            "personal_communication",
+            "other"
+          ]
+        },
+        "lookup_id": { "type": ["string", "null"] },
+        "capability_id": { "type": ["string", "null"] },
+        "observed_at": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "trace_ref": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

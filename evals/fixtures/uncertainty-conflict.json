@@ -1,0 +1,18 @@
+{
+  "uncertainty_id": "U-001",
+  "state": "uncertain",
+  "trigger": "conflicting_evidence",
+  "problem": "两篇研究对同一方法的定位收益给出方向不同的结论。",
+  "source_text_or_judgment": "是否可以在综述中写成该方法普遍提高定位精度？",
+  "affected_claim_ids": ["C-001"],
+  "known_facts": ["两篇研究均报告了实验结果，但材料、曲率和评价指标不同。"],
+  "unknown_or_contested": ["差异来自方法本身还是来自实验条件。"],
+  "permitted_action": "pause_and_escalate",
+  "escalation_target": "domain_expert",
+  "baseline_artifact": "evidence/claim-ledger__review__v0.1.0.jsonl",
+  "created_at": "2026-07-18T22:30:00+08:00",
+  "resolved_at": null,
+  "resolution": null,
+  "human_checkpoint_id": null,
+  "status": "open"
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1",
+  "name": "sci-review-system-hooks",
+  "default_enabled": false,
+  "enabled_when": "SCI_REVIEW_SYSTEM_HOOKS=1",
+  "install_scope": "manual",
+  "read_only_by_default": true,
+  "hooks": [
+    {
+      "id": "sci-review-system-session-announce",
+      "event": "SessionStart",
+      "command": "python hooks/sci_review_hook.py session",
+      "mutates_files": false,
+      "network": false,
+      "description": "Print current project state, reading anchor, and safe entry reminder."
+    },
+    {
+      "id": "sci-review-system-work-unit-check",
+      "event": "WorkUnitStart",
+      "command": "python hooks/sci_review_hook.py unit",
+      "mutates_files": false,
+      "network": false,
+      "description": "Check state prerequisites before a work unit begins."
+    }
+  ]
+}

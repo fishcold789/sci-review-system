@@ -1,0 +1,414 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/editorial-comment-map.schema.json",
+  "title": "Editorial Comment to Manuscript Change Map",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "comment_map_id",
+    "decision_id",
+    "decision_record_ref",
+    "source_confirmation",
+    "manuscript_baseline",
+    "revision_artifact",
+    "formal_reply_state",
+    "comments",
+    "global_reaudits",
+    "human_control",
+    "updated_at"
+  ],
+  "properties": {
+    "comment_map_id": { "type": "string", "pattern": "^ECM-[0-9]{3,}$" },
+    "decision_id": { "type": "string", "pattern": "^ED-[0-9]{3,}$" },
+    "decision_record_ref": { "type": "string", "minLength": 1 },
+    "source_confirmation": { "const": "actual_received_and_human_confirmed" },
+    "manuscript_baseline": { "$ref": "#/$defs/artifact_ref" },
+    "revision_artifact": { "$ref": "#/$defs/revision_artifact" },
+    "formal_reply_state": {
+      "enum": ["strategy_only", "draft_not_sendable", "ready_for_human_review", "human_approved"]
+    },
+    "comments": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/comment" }
+    },
+    "global_reaudits": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/audit" }
+    },
+    "human_control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interpretation_check", "scientific_change_check", "attachment_check", "send_authorization", "approved_by", "approved_at", "delivery_status", "sent_at", "delivery_evidence_ref"],
+      "properties": {
+        "interpretation_check": { "enum": ["pending", "accepted", "rejected"] },
+        "scientific_change_check": { "enum": ["pending", "accepted", "rejected"] },
+        "attachment_check": { "enum": ["pending", "accepted", "rejected", "not_applicable"] },
+        "send_authorization": { "enum": ["not_requested", "pending", "approved", "rejected"] },
+        "approved_by": { "type": ["string", "null"] },
+        "approved_at": { "type": ["string", "null"], "format": "date-time" },
+        "delivery_status": { "enum": ["not_sent", "sent_by_human", "failed"] },
+        "sent_at": { "type": ["string", "null"], "format": "date-time" },
+        "delivery_evidence_ref": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "delivery_status": { "const": "sent_by_human" } },
+            "required": ["delivery_status"]
+          },
+          "then": {
+            "properties": {
+              "send_authorization": { "const": "approved" },
+              "sent_at": { "type": "string", "format": "date-time" },
+              "delivery_evidence_ref": { "type": "string", "minLength": 1 }
+            }
+          },
+          "else": {
+            "properties": {
+              "sent_at": { "type": "null" },
+              "delivery_evidence_ref": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      }
+    },
+    "revision_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "path", "version", "sha256"],
+      "properties": {
+        "status": { "enum": ["missing", "planned", "in_progress", "candidate", "frozen"] },
+        "path": { "type": ["string", "null"] },
+        "version": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^[A-Fa-f0-9]{64}$" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "enum": ["candidate", "frozen"] } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "version": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+            }
+          }
+        }
+      ]
+    },
+    "comment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comment_id",
+        "parent_comment_id",
+        "origin",
+        "source_anchor",
+        "original_text",
+        "normalized_request",
+        "request_type",
+        "affected_claim_ids",
+        "affected_sections",
+        "plan",
+        "implementation",
+        "response",
+        "re_audits"
+      ],
+      "properties": {
+        "comment_id": { "type": "string", "pattern": "^(EC|RC)-[0-9]{3,}$" },
+        "parent_comment_id": { "type": ["string", "null"], "pattern": "^(EC|RC)-[0-9]{3,}$" },
+        "origin": { "$ref": "#/$defs/origin" },
+        "source_anchor": { "type": "string", "minLength": 1 },
+        "original_text": { "type": "string", "minLength": 1 },
+        "normalized_request": { "type": "string", "minLength": 1 },
+        "request_type": {
+          "enum": ["scientific", "methodological", "evidence", "presentation", "language", "administrative", "ethical_or_legal", "package", "other"]
+        },
+        "affected_claim_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^C-[0-9]{3,}$" }
+        },
+        "affected_sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["section_id", "baseline_anchor", "impact"],
+            "properties": {
+              "section_id": { "type": "string", "minLength": 1 },
+              "baseline_anchor": { "type": "string", "minLength": 1 },
+              "impact": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["disposition", "rationale", "planned_actions", "evidence_needed", "target_claim_ids", "target_sections"],
+          "properties": {
+            "disposition": { "enum": ["change", "clarify", "no_change_with_reason", "request_clarification", "administrative_action", "other"] },
+            "rationale": { "type": "string", "minLength": 1 },
+            "planned_actions": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "evidence_needed": { "type": "array", "items": { "type": "string" } },
+            "target_claim_ids": { "type": "array", "items": { "type": "string", "pattern": "^C-[0-9]{3,}$" } },
+            "target_sections": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "completed_change"],
+          "properties": {
+            "status": { "enum": ["not_started", "in_progress", "completed", "not_applicable"] },
+            "completed_change": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/completed_change" }] }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "status": { "const": "completed" } },
+                "required": ["status"]
+              },
+              "then": {
+                "properties": { "completed_change": { "$ref": "#/$defs/completed_change" } }
+              },
+              "else": {
+                "properties": { "completed_change": { "type": "null" } }
+              }
+            },
+            {
+              "if": {
+                "properties": { "status": { "const": "not_applicable" } },
+                "required": ["status"]
+              },
+              "then": {
+                "properties": { "completed_change": { "type": "null" } }
+              }
+            }
+          ]
+        },
+        "response": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "draft_text"],
+          "properties": {
+            "status": { "enum": ["strategy_only", "drafted", "ready", "human_approved"] },
+            "draft_text": { "type": ["string", "null"] }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "status": { "enum": ["drafted", "ready", "human_approved"] } },
+                "required": ["status"]
+              },
+              "then": {
+                "properties": { "draft_text": { "type": "string", "minLength": 1 } }
+              }
+            }
+          ]
+        },
+        "re_audits": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/audit" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "origin": {
+                "properties": { "role": { "const": "editor" } },
+                "required": ["role"]
+              }
+            },
+            "required": ["origin"]
+          },
+          "then": {
+            "properties": { "comment_id": { "pattern": "^EC-[0-9]{3,}$" } }
+          },
+          "else": {
+            "properties": { "comment_id": { "pattern": "^RC-[0-9]{3,}$" } }
+          }
+        }
+      ]
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "reviewer_label"],
+      "properties": {
+        "role": { "enum": ["editor", "reviewer"] },
+        "reviewer_label": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "role": { "const": "reviewer" } }, "required": ["role"] },
+          "then": { "properties": { "reviewer_label": { "type": "string", "minLength": 1 } } },
+          "else": { "properties": { "reviewer_label": { "type": "null" } } }
+        }
+      ]
+    },
+    "completed_change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "artifact_path", "revised_anchors", "claim_ids_after_change", "evidence_refs", "completed_at"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "artifact_path": { "type": "string", "minLength": 1 },
+        "revised_anchors": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "claim_ids_after_change": { "type": "array", "items": { "type": "string", "pattern": "^C-[0-9]{3,}$" } },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } },
+        "completed_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audit_type", "status", "reason", "evidence_refs", "checked_by", "checked_at"],
+      "properties": {
+        "audit_type": { "enum": ["evidence_scope", "contradiction", "logic", "citation", "numbers_and_units", "cross_section_consistency", "figure_or_table", "terminology", "language", "meaning_preservation", "declarations", "journal_requirements", "package_integrity", "other"] },
+        "status": { "enum": ["PASS", "FAIL", "NOT_CHECKED", "NOT_APPLICABLE"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } },
+        "checked_by": { "type": ["string", "null"] },
+        "checked_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "PASS" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "evidence_refs": { "type": "array", "minItems": 1 },
+              "checked_by": { "type": "string", "minLength": 1 },
+              "checked_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "revision_artifact": {
+            "properties": { "status": { "enum": ["missing", "planned"] } },
+            "required": ["status"]
+          }
+        },
+        "required": ["revision_artifact"]
+      },
+      "then": {
+        "properties": {
+          "formal_reply_state": { "const": "strategy_only" },
+          "comments": {
+            "items": {
+              "properties": {
+                "implementation": {
+                  "properties": { "status": { "enum": ["not_started", "not_applicable"] } }
+                },
+                "response": {
+                  "properties": {
+                    "status": { "const": "strategy_only" },
+                    "draft_text": { "type": "null" }
+                  }
+                }
+              }
+            }
+          },
+          "human_control": {
+            "properties": {
+              "send_authorization": { "const": "not_requested" },
+              "delivery_status": { "const": "not_sent" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "formal_reply_state": { "const": "ready_for_human_review" } },
+        "required": ["formal_reply_state"]
+      },
+      "then": {
+        "properties": {
+          "revision_artifact": {
+            "properties": { "status": { "enum": ["candidate", "frozen"] } }
+          },
+          "comments": {
+            "items": {
+              "properties": {
+                "implementation": {
+                  "properties": { "status": { "enum": ["completed", "not_applicable"] } }
+                },
+                "response": { "properties": { "status": { "const": "ready" } } },
+                "re_audits": {
+                  "items": { "properties": { "status": { "enum": ["PASS", "NOT_APPLICABLE"] } } }
+                }
+              }
+            }
+          },
+          "global_reaudits": {
+            "items": { "properties": { "status": { "enum": ["PASS", "NOT_APPLICABLE"] } } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "formal_reply_state": { "const": "human_approved" } },
+        "required": ["formal_reply_state"]
+      },
+      "then": {
+        "properties": {
+          "revision_artifact": {
+            "properties": { "status": { "const": "frozen" } }
+          },
+          "comments": {
+            "items": {
+              "properties": {
+                "implementation": {
+                  "properties": { "status": { "enum": ["completed", "not_applicable"] } }
+                },
+                "response": { "properties": { "status": { "const": "human_approved" } }, "required": ["status", "draft_text"] },
+                "re_audits": {
+                  "items": { "properties": { "status": { "enum": ["PASS", "NOT_APPLICABLE"] } } }
+                }
+              }
+            }
+          },
+          "global_reaudits": {
+            "items": { "properties": { "status": { "enum": ["PASS", "NOT_APPLICABLE"] } } }
+          },
+          "human_control": {
+            "properties": {
+              "interpretation_check": { "const": "accepted" },
+              "scientific_change_check": { "const": "accepted" },
+              "attachment_check": { "enum": ["accepted", "not_applicable"] },
+              "send_authorization": { "const": "approved" },
+              "approved_by": { "type": "string", "minLength": 1 },
+              "approved_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

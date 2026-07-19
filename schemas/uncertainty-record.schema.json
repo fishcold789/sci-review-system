@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/uncertainty-record.schema.json",
+  "title": "Uncertainty Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["uncertainty_id", "state", "trigger", "problem", "affected_claim_ids", "known_facts", "unknown_or_contested", "permitted_action", "escalation_target", "baseline_artifact", "created_at", "status"],
+  "properties": {
+    "uncertainty_id": { "type": "string", "pattern": "^U-[0-9]{3,}$" },
+    "state": { "enum": ["verified", "supported", "uncertain", "human_review_required"] },
+    "trigger": { "enum": ["missing_source", "abstract_only", "missing_anchor", "missing_conditions", "conflicting_evidence", "mechanism_interpretation", "causal_inference", "novel_or_time_sensitive", "incomparable_metrics", "ambiguous_term_or_formula", "expert_or_internal_judgment", "other"] },
+    "problem": { "type": "string", "minLength": 1 },
+    "source_text_or_judgment": { "type": "string" },
+    "affected_claim_ids": { "type": "array", "items": { "type": "string" } },
+    "affected_unit_ids": { "type": "array", "items": { "type": "string" } },
+    "known_facts": { "type": "array", "items": { "type": "string" } },
+    "unknown_or_contested": { "type": "array", "items": { "type": "string" } },
+    "permitted_action": { "enum": ["write_bounded", "write_with_qualification", "hold_claim", "pause_and_escalate"] },
+    "escalation_target": { "enum": ["none", "advisor", "peer", "domain_expert", "user_choice"] },
+    "baseline_artifact": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "resolved_at": { "type": ["string", "null"], "format": "date-time" },
+    "resolution": { "type": ["string", "null"] },
+    "human_checkpoint_id": { "type": ["string", "null"] },
+    "status": { "enum": ["open", "awaiting_human", "resolved", "rejected", "superseded"] }
+  }
+}

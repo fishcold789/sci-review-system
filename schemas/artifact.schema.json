@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/artifact.schema.json",
+  "title": "SCI Review Artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_id", "artifact_type", "title", "path", "format", "source_unit_id", "version", "status", "created_at", "content_hash", "schema_version", "input_artifact_ids", "source_refs", "gate_ids", "human_review", "supersedes"],
+  "properties": {
+    "artifact_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)+__v[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "artifact_type": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "path": { "type": "string", "minLength": 1 },
+    "format": { "enum": ["md", "json", "jsonl", "csv", "svg", "png", "pdf", "docx"] },
+    "source_unit_id": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["draft", "candidate", "verified", "superseded", "rejected", "archived"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "content_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "schema_version": { "type": "string", "minLength": 1 },
+    "input_artifact_ids": { "type": "array", "items": { "type": "string" } },
+    "source_refs": { "type": "array", "items": { "type": "string" } },
+    "reading_anchor": { "type": ["object", "null"] },
+    "gate_ids": { "type": "array", "items": { "type": "string" } },
+    "human_review": { "$ref": "#/$defs/human_review" },
+    "supersedes": { "type": ["string", "null"] },
+    "claim_ids": { "type": "array", "items": { "type": "string" } },
+    "uncertainty_notes": { "type": "array", "items": { "type": "string" } },
+    "language": { "enum": ["zh", "en", "bilingual", "neutral"] },
+    "language_stage": { "type": ["string", "null"] }
+  },
+  "$defs": {
+    "human_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer", "decision_id"],
+      "properties": {
+        "status": { "enum": ["not_requested", "pending", "accepted", "rejected"] },
+        "reviewer": { "type": ["string", "null"] },
+        "decision_id": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

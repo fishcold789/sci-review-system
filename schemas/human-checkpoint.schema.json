@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/human-checkpoint.schema.json",
+  "title": "Human Checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["checkpoint_id", "uncertainty_ids", "question", "source_text_or_judgment", "evidence", "conflict_or_uncertainty", "known_boundary", "non_self_judgment", "suggested_expert", "status", "created_at", "resume_from_artifact"],
+  "properties": {
+    "checkpoint_id": { "type": "string", "pattern": "^HC-[0-9]{3,}$" },
+    "uncertainty_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "question": { "type": "string", "minLength": 1 },
+    "source_text_or_judgment": { "type": "string" },
+    "evidence": { "type": "array", "items": { "type": "string" } },
+    "conflict_or_uncertainty": { "type": "array", "items": { "type": "string" } },
+    "known_boundary": { "type": "array", "items": { "type": "string" } },
+    "non_self_judgment": { "type": "array", "items": { "type": "string" } },
+    "suggested_expert": { "enum": ["advisor", "peer", "domain_expert", "user_choice"] },
+    "status": { "enum": ["not_required", "open", "asked", "answered", "accepted", "rejected", "expired"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "answered_at": { "type": ["string", "null"], "format": "date-time" },
+    "answer": { "type": ["string", "null"] },
+    "decision_id": { "type": ["string", "null"] },
+    "resume_from_artifact": { "type": "string", "minLength": 1 },
+    "re_audit_required": { "type": "boolean" }
+  }
+}

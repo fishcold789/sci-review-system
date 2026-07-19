@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/review-protocol.schema.json",
+  "title": "Review Research Protocol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_id", "review_type", "research_question", "scope", "eligibility", "databases", "date_range", "screening", "appraisal", "synthesis", "reporting", "version", "status"],
+  "properties": {
+    "protocol_id": { "type": "string", "pattern": "^RP-[0-9]{3,}$" },
+    "review_type": { "enum": ["narrative", "systematic", "scoping", "critical", "methodological", "meta-analysis", "meta-synthesis"] },
+    "research_question": { "type": "string", "minLength": 1 },
+    "scope": { "type": "object" },
+    "eligibility": { "type": "object" },
+    "databases": { "type": "array", "items": { "type": "string" } },
+    "date_range": { "type": "object" },
+    "screening": { "type": "object" },
+    "appraisal": { "type": "object" },
+    "synthesis": { "type": "object" },
+    "reporting": { "type": "object" },
+    "registration": { "type": ["object", "null"] },
+    "deviations": { "type": "array", "items": { "type": "object" } },
+    "version": { "type": "string", "pattern": "^v[0-9]{3}$" },
+    "status": { "enum": ["draft", "proposed", "confirmed", "amended", "superseded"] }
+  }
+}

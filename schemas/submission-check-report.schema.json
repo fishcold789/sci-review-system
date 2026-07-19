@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/submission-check-report.schema.json",
+  "title": "Submission Package Check Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "package_plan_id",
+    "package_fingerprint",
+    "checked_at",
+    "overall_status",
+    "checks",
+    "unresolved_items",
+    "user_review",
+    "submission_status"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "report_id": { "type": "string", "pattern": "^SC-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "package_plan_id": { "type": "string", "pattern": "^PP-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "package_fingerprint": { "type": "string", "minLength": 1 },
+    "checked_at": { "type": "string", "format": "date-time" },
+    "overall_status": { "enum": ["PASS", "FAIL", "NOT_CHECKED"] },
+    "checks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/check" }
+    },
+    "unresolved_items": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "user_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewed", "reviewed_at", "notes"],
+      "properties": {
+        "reviewed": { "type": "boolean" },
+        "reviewed_at": { "type": ["string", "null"], "format": "date-time" },
+        "notes": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "reviewed": { "const": true } }, "required": ["reviewed"] },
+          "then": { "properties": { "reviewed_at": { "type": "string", "format": "date-time" } } },
+          "else": { "properties": { "reviewed_at": { "type": "null" } } }
+        }
+      ]
+    },
+    "submission_status": { "enum": ["not_submitted", "submitted_by_user", "unknown"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "overall_status": { "const": "PASS" } }, "required": ["overall_status"] },
+      "then": {
+        "properties": {
+          "checks": {
+            "minItems": 1,
+            "items": {
+              "allOf": [
+                { "$ref": "#/$defs/check" },
+                { "properties": { "status": { "const": "PASS" } } }
+              ]
+            }
+          },
+          "unresolved_items": { "maxItems": 0 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "overall_status": { "const": "FAIL" } }, "required": ["overall_status"] },
+      "then": {
+        "properties": {
+          "checks": {
+            "contains": { "properties": { "status": { "const": "FAIL" } }, "required": ["status"] },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "overall_status": { "const": "NOT_CHECKED" } }, "required": ["overall_status"] },
+      "then": {
+        "anyOf": [
+          { "properties": { "checks": { "maxItems": 0 } } },
+          {
+            "properties": {
+              "checks": {
+                "items": {
+                  "allOf": [
+                    { "$ref": "#/$defs/check" },
+                    { "properties": { "status": { "enum": ["PASS", "NOT_CHECKED"] } } }
+                  ]
+                },
+                "contains": { "properties": { "status": { "const": "NOT_CHECKED" } }, "required": ["status"] },
+                "minContains": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_type", "reference", "captured_at"],
+      "properties": {
+        "evidence_type": { "enum": ["file_hash", "command_output", "render", "manifest_entry", "official_source", "human_confirmation", "other"] },
+        "reference": { "type": "string", "minLength": 1 },
+        "captured_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_id", "label", "target", "rule_basis", "status", "performed_by", "checked_at", "evidence"],
+      "properties": {
+        "check_id": { "type": "string", "pattern": "^CK-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "label": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "rule_basis": { "enum": ["user_manifest", "user_template", "user_instruction", "confirmed_journal"] },
+        "rule_reference": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["PASS", "FAIL", "NOT_CHECKED"] },
+        "performed_by": { "enum": ["system", "human", "external_tool", "not_performed"] },
+        "checked_at": { "type": ["string", "null"], "format": "date-time" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "reason": { "type": ["string", "null"] },
+        "next_action": { "type": ["string", "null"] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "PASS" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "performed_by": { "enum": ["system", "human", "external_tool"] },
+              "checked_at": { "type": "string", "format": "date-time" },
+              "evidence": { "minItems": 1 }
+            },
+            "required": ["rule_reference"]
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "FAIL" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "performed_by": { "enum": ["system", "human", "external_tool"] },
+              "checked_at": { "type": "string", "format": "date-time" },
+              "evidence": { "minItems": 1 },
+              "reason": { "type": "string", "minLength": 1 },
+              "next_action": { "type": "string", "minLength": 1 }
+            },
+            "required": ["rule_reference", "reason", "next_action"]
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "NOT_CHECKED" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "performed_by": { "const": "not_performed" },
+              "checked_at": { "type": "null" },
+              "reason": { "type": "string", "minLength": 1 },
+              "next_action": { "type": "string", "minLength": 1 }
+            },
+            "required": ["reason", "next_action"]
+          }
+        }
+      ]
+    }
+  }
+}

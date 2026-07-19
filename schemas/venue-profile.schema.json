@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sci-review-system://schemas/venue-profile.schema.json",
+  "title": "Optional Journal Venue Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "status",
+    "target_journal",
+    "use_mode",
+    "decision",
+    "freshness_policy",
+    "sources",
+    "requirements",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "profile_id": { "type": "string", "pattern": "^VP-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+    "status": { "enum": ["not_selected", "candidate", "confirmed"] },
+    "target_journal": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/journal" }
+      ]
+    },
+    "use_mode": { "enum": ["skipped", "exploratory", "enforceable"] },
+    "decision": { "$ref": "#/$defs/decision" },
+    "freshness_policy": { "$ref": "#/$defs/freshnessPolicy" },
+    "sources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/requirement" }
+    },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "not_selected" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "target_journal": { "type": "null" },
+          "use_mode": { "const": "skipped" },
+          "sources": { "maxItems": 0 },
+          "requirements": { "maxItems": 0 },
+          "decision": {
+            "allOf": [
+              { "$ref": "#/$defs/decision" },
+              { "properties": { "confirmed_by_user": { "const": false }, "skip_reason": { "type": "string", "minLength": 1 } }, "required": ["skip_reason"] }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "candidate" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "target_journal": { "$ref": "#/$defs/journal" },
+          "use_mode": { "const": "exploratory" },
+          "requirements": {
+            "items": {
+              "allOf": [
+                { "$ref": "#/$defs/requirement" },
+                { "properties": { "enforcement": { "const": "exploratory" } } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "confirmed" } }, "required": ["status"] },
+      "then": {
+        "properties": {
+          "target_journal": { "$ref": "#/$defs/journal" },
+          "use_mode": { "const": "enforceable" },
+          "decision": {
+            "allOf": [
+              { "$ref": "#/$defs/decision" },
+              {
+                "properties": {
+                  "confirmed_by_user": { "const": true },
+                  "confirmed_at": { "type": "string", "format": "date-time" },
+                  "confirmed_by": { "type": "string", "minLength": 1 }
+                },
+                "required": ["confirmed_at", "confirmed_by"]
+              }
+            ]
+          },
+          "sources": {
+            "minItems": 2,
+            "items": {
+              "allOf": [
+                { "$ref": "#/$defs/source" },
+                {
+                  "properties": {
+                    "authority": { "enum": ["official_journal", "official_publisher"] },
+                    "freshness": {
+                      "allOf": [
+                        { "$ref": "#/$defs/freshness" },
+                        { "properties": { "status": { "const": "current" } } }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "allOf": [
+              { "contains": { "properties": { "source_type": { "const": "author_guidelines" } }, "required": ["source_type"] }, "minContains": 1 },
+              { "contains": { "properties": { "source_type": { "const": "submission_system" } }, "required": ["source_type"] }, "minContains": 1 }
+            ]
+          },
+          "requirements": {
+            "items": {
+              "allOf": [
+                { "$ref": "#/$defs/requirement" },
+                {
+                  "properties": {
+                    "enforcement": { "const": "enforceable" },
+                    "source_ids": { "minItems": 1 }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "journal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "publisher": { "type": ["string", "null"] },
+        "issn": { "type": ["string", "null"] },
+        "article_type": { "type": ["string", "null"] }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["confirmed_by_user", "rationale"],
+      "properties": {
+        "confirmed_by_user": { "type": "boolean" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "skip_reason": { "type": ["string", "null"] },
+        "confirmed_at": { "type": ["string", "null"], "format": "date-time" },
+        "confirmed_by": { "type": ["string", "null"] }
+      }
+    },
+    "freshnessPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maximum_age_days", "evaluated_at", "basis"],
+      "properties": {
+        "maximum_age_days": { "type": "integer", "minimum": 1 },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "basis": { "type": "string", "minLength": 1 }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evaluated_at", "age_days", "basis"],
+      "properties": {
+        "status": { "enum": ["current", "stale", "unknown"] },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "age_days": { "type": ["integer", "null"], "minimum": 0 },
+        "basis": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "source_type", "authority", "title", "url", "access_date", "freshness", "extracted_facts"],
+      "properties": {
+        "source_id": { "type": "string", "pattern": "^VS-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "source_type": {
+          "enum": [
+            "journal_homepage",
+            "author_guidelines",
+            "submission_system",
+            "article_type_guide",
+            "template",
+            "editorial_policy",
+            "ethics_policy",
+            "data_policy",
+            "ai_policy",
+            "fees",
+            "indexing",
+            "other"
+          ]
+        },
+        "authority": { "enum": ["official_journal", "official_publisher", "third_party"] },
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" },
+        "access_date": { "type": "string", "format": "date" },
+        "freshness": { "$ref": "#/$defs/freshness" },
+        "extracted_facts": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement_id", "category", "rule", "enforcement", "source_ids"],
+      "properties": {
+        "requirement_id": { "type": "string", "pattern": "^VR-[A-Za-z0-9][A-Za-z0-9._-]*$" },
+        "category": { "type": "string", "minLength": 1 },
+        "rule": { "type": "string", "minLength": 1 },
+        "enforcement": { "enum": ["exploratory", "enforceable"] },
+        "source_ids": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^VS-[A-Za-z0-9][A-Za-z0-9._-]*$" } },
+        "ambiguity": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
+
