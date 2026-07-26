@@ -1,0 +1,11 @@
+name: SCI Review System
+authors: [fishcold789]
+category: Agent
+tags: [Codex Skill, 科研写作, 文献综述, 文献检索, 证据管理]
+status: in-progress
+updated: 2026-07-27
+summary: 面向理工科综述章节的 Codex 协作技能，贯通文献检索、证据整理、结构设计、章节写作、循环改稿与验收。
+
+collection: 科研协作
+demo: https://github.com/fishcold789/sci-review-system
+readme: README.md
