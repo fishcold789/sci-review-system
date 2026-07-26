@@ -89,6 +89,6 @@ SKILL.md               地图（本文）
 references/00–05       后台：人机分工/母本与轴/进化线/槽/证据/写作验收
 references/06          正脸：剧本手册 ← 最常读
 checks/                六个机械检查器
-templates/             进化线表 / 槽定义卡 / 证据卡 / 分配表 / 项目档案
+templates/             进化线表 / 槽定义卡 / 证据卡 / 分配表 / 项目档案 / 循环开机
 evals/                 回归测试（正样本必须 PASS，空话版必须 BLOCK）
 ```
