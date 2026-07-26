@@ -1,4 +1,0 @@
-interface:
-  display_name: "SCI Review System"
-  short_description: "Build or continue SCI reviews with enforced evidence gates"
-  default_prompt: "Use $sci-review-system to enter this SCI review at the appropriate checkpoint, preserve reusable human-readable artifacts, and enforce evidence, uncertainty, gate, and handoff contracts."

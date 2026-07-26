@@ -1,0 +1,5 @@
+References
+[46] A Smith, B Jones. Ultrasonic sizing of embedded flaws in steel. NDT E Int 2001;34:211-219.
+[47] C Wang, D Li. Phased array inspection of curved welds. Ultrasonics 2010;50:33-41.
+[48] E Brown. Diffraction time-of-flight measurement of crack height. Insight 1998;40:120-126.
+[49] F Garcia, G Meyer. Attenuation correction for coarse grained austenitic steel. NDT E Int 2005;38:1-9.
